@@ -68,6 +68,7 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     private UsbManager usbManager;
     private PendingIntent mPermissionIntent;
     private Button btnRefresh, btnToDep, btnLogout;
+    private boolean isPrinterConnected = false;  // 添加打印机连接状态标志
 
     private LinearLayout nxDepContainer;
     private LinearLayout gbDepContainer;
@@ -77,6 +78,7 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     private TextView tvGbDepOrders;
     private ImageButton btnClearNxDep;
     private ImageButton btnClearGbDep;
+    private TextView tvNoData;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -102,7 +104,7 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     @Override
     protected void initView() {
         leftMenuRecyclerView = findViewById(R.id.left_menu);
-        goodsRecyclerView = findViewById(R.id.goods_list);
+        goodsRecyclerView = findViewById(R.id.rv_stock_out);
 
         btnRefresh = findViewById(R.id.btn_refresh);
         btnToDep = findViewById(R.id.btn_dep);
@@ -117,6 +119,7 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
         tvGbDepOrders = findViewById(R.id.tv_gb_dep_orders);
         btnClearNxDep = findViewById(R.id.btn_clear_nx_dep);
         btnClearGbDep = findViewById(R.id.btn_clear_gb_dep);
+        tvNoData = findViewById(R.id.tv_no_data);
     }
 
     @Override
@@ -285,19 +288,14 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     @Override
     public void getStockGoodsSuccess(List<NxDistributerGoodsShelfEntity> outGoods) {
         stopLoading();
-        if (outGoods != null && !outGoods.isEmpty()) {
-            Log.d("StockOutActivity", "接收到货架数据，数量: " + outGoods.size());
-            
-            // 更新左侧货架列表
-            shelfAdapter.setData(outGoods);
-            
-            // 默认显示第一个货架的商品
-            NxDistributerGoodsShelfEntity firstShelf = outGoods.get(0);
-            if (firstShelf.getNxDisGoodsShelfGoodsEntities() != null) {
-                goodsAdapter.setGoodsList(firstShelf.getNxDisGoodsShelfGoodsEntities());
-            }
+        if (outGoods == null || outGoods.isEmpty()) {
+            tvNoData.setVisibility(View.VISIBLE);
+            shelfAdapter.setData(new ArrayList<>());
+            goodsAdapter.setGoodsList(new ArrayList<>());
         } else {
-            showToast("暂无数据");
+            tvNoData.setVisibility(View.GONE);
+            shelfAdapter.setData(outGoods);
+            goodsAdapter.setGoodsList(outGoods.get(0).getNxDisGoodsShelfGoodsEntities());
         }
     }
 
@@ -513,16 +511,36 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
         filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
         registerReceiver(receiver, filter);
 
-        // 初始化 USB 管理器
-        usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
-        // 获取所有设备，选择满足条件的设备
-        HashMap<String, UsbDevice> deviceList = usbManager.getDeviceList();
-        Iterator<UsbDevice> deviceIterator = deviceList.values().iterator();
-        while(deviceIterator.hasNext()) {
-            UsbDevice device = deviceIterator.next();
-            if (device.getVendorId() == 26728 && device.getProductId() == 1280) {
-                usbConn(device);
+        // 只在打印机未连接时尝试连接
+        if (!isPrinterConnected) {
+            connectPrinter();
+        }
+    }
+
+    private void connectPrinter() {
+        try {
+            // 初始化 USB 管理器
+            usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+            // 获取所有设备，选择满足条件的设备
+            HashMap<String, UsbDevice> deviceList = usbManager.getDeviceList();
+            Iterator<UsbDevice> deviceIterator = deviceList.values().iterator();
+            boolean foundPrinter = false;
+            
+            while(deviceIterator.hasNext()) {
+                UsbDevice device = deviceIterator.next();
+                if (device.getVendorId() == 26728 && device.getProductId() == 1280) {
+                    foundPrinter = true;
+                    usbConn(device);
+                    break;
+                }
             }
+            
+            if (!foundPrinter) {
+                showToast("未找到打印机设备");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "连接打印机时出错: " + e.getMessage());
+            showToast("连接打印机失败: " + e.getMessage());
         }
     }
 
@@ -555,18 +573,13 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
                     break;
 
                 case UsbManager.ACTION_USB_DEVICE_DETACHED:
+                    isPrinterConnected = false;
                     mHandler.obtainMessage(CONN_STATE_DISCONN).sendToTarget();
                     break;
 
                 case UsbManager.ACTION_USB_DEVICE_ATTACHED:
-                    usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
-                    HashMap<String, UsbDevice> deviceList = usbManager.getDeviceList();
-                    Iterator<UsbDevice> deviceIterator = deviceList.values().iterator();
-                    while(deviceIterator.hasNext()) {
-                        UsbDevice device = deviceIterator.next();
-                        if (device.getVendorId() == 26728 && device.getProductId() == 1280) {
-                            usbConn(device);
-                        }
+                    if (!isPrinterConnected) {
+                        connectPrinter();
                     }
                     break;
 
@@ -576,15 +589,18 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
                     if (id == deviceId) {
                         switch (state) {
                             case DeviceConnFactoryManager.CONN_STATE_DISCONNECT:
+                                isPrinterConnected = false;
                                 showToast("打印机已断开连接");
                                 break;
                             case DeviceConnFactoryManager.CONN_STATE_CONNECTING:
                                 showToast("正在连接打印机...");
                                 break;
                             case DeviceConnFactoryManager.CONN_STATE_CONNECTED:
+                                isPrinterConnected = true;
                                 showToast("打印机已连接");
                                 break;
                             case DeviceConnFactoryManager.CONN_STATE_FAILED:
+                                isPrinterConnected = false;
                                 showToast("打印机连接失败");
                                 break;
                         }
@@ -634,7 +650,7 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d("StockOutActivity", "onResume: 页面显示，刷新数据");
+        Log.d(TAG, "onResume: 页面显示，刷新数据");
         updateDepartmentDisplay();
         loadData();
     }

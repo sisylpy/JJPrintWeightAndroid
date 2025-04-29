@@ -11,6 +11,7 @@ import com.swolo.lpy.pysx.http.HttpManager;
 import com.swolo.lpy.pysx.main.modal.NxDepartmentOrdersEntity;
 import com.swolo.lpy.pysx.main.modal.NxDistributerGoodsShelfEntity;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import rx.Subscriber;
@@ -167,7 +168,8 @@ public class StockOutPresenterImpl implements MainContract.StockOutPresenter {
                             Log.d(TAG, "获取到带部门ID的货架数据，数量: " + result.size());
                             mView.getStockGoodsSuccess(result);
                         } else {
-                            mView.getStockGoodsFail("没有获取到数据");
+                            Log.d(TAG, "没有获取到数据，清空列表");
+                            mView.getStockGoodsSuccess(new ArrayList<>());
                         }
                     }
                 }
