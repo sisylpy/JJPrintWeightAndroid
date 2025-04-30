@@ -25,17 +25,19 @@ import android.support.v7.app.AppCompatActivity;
 import com.swolo.lpy.pysx.R;
 import com.swolo.lpy.pysx.main.adapter.BluetoothDeviceAdapter;
 import com.swolo.lpy.pysx.main.bean.BluetoothParameter;
-
+import com.printer.command.LabelCommand;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.Vector;
 
 public class BluetoothDeviceActivity extends AppCompatActivity {
     private static final String TAG = BluetoothDeviceActivity.class.getSimpleName();
     private static final int REQUEST_BLUETOOTH_PERMISSIONS = 1001;
     private static final int REQUEST_ENABLE_BT = 1;
+    private static final int REQUEST_BLUETOOTH_CONNECT_PERMISSION = 1002;
     
     private ListView lvDevices;
     private BluetoothDeviceAdapter adapter;
@@ -45,6 +47,7 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
     public static final String EXTRA_DEVICE_ADDRESS = "address";
     private Button btnSearch;
     private boolean mIsSearching = false;
+    private String mSelectedMacAddress;
 
     private final BroadcastReceiver mFindBlueToothReceiver = new BroadcastReceiver() {
         @Override
@@ -112,32 +115,52 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
         lvDevices.setAdapter(adapter);
         
         lvDevices.setOnItemClickListener((parent, view, position, id) -> {
+            Log.d(TAG, "点击了设备列表项，位置: " + position);
             if (position == 0 || position == pairedDevices.size() + 1) {
+                Log.d(TAG, "点击了标题项，忽略");
                 return;
             }
             
             String mac = null;
             if (position <= pairedDevices.size()) {
                 mac = pairedDevices.get(position - 1).getBluetoothMac();
+                Log.d(TAG, "选择了已配对设备，MAC: " + mac);
             } else {
                 mac = newDevices.get(position - pairedDevices.size() - 2).getBluetoothMac();
+                Log.d(TAG, "选择了新设备，MAC: " + mac);
             }
             
             if (mBluetoothAdapter == null) {
+                Log.e(TAG, "蓝牙适配器为空");
                 return;
             }
             
+            // 检查权限
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) 
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) 
                         != PackageManager.PERMISSION_GRANTED) {
+                    Log.e(TAG, "缺少蓝牙连接权限");
+                    Toast.makeText(this, "缺少蓝牙连接权限", Toast.LENGTH_SHORT).show();
+                    ActivityCompat.requestPermissions(this, 
+                        new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 
+                        REQUEST_BLUETOOTH_CONNECT_PERMISSION);
                     return;
                 }
             }
             
+            Log.d(TAG, "取消蓝牙搜索");
             mBluetoothAdapter.cancelDiscovery();
+            
+            // 保存选中的MAC地址
+            mSelectedMacAddress = mac;
+            
             Intent intent = new Intent();
             intent.putExtra(EXTRA_DEVICE_ADDRESS, mac);
             setResult(Activity.RESULT_OK, intent);
+            
+            Log.d(TAG, "开始打印测试小票");
+            printTestReceipt();
+            
             finish();
         });
 
@@ -221,6 +244,8 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        Log.d(TAG, "收到权限请求结果，requestCode: " + requestCode);
+        
         if (requestCode == REQUEST_BLUETOOTH_PERMISSIONS) {
             boolean allGranted = true;
             for (int result : grantResults) {
@@ -231,10 +256,21 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
             }
             
             if (allGranted) {
+                Log.d(TAG, "所有蓝牙权限已授予");
                 checkBluetoothEnabled();
             } else {
+                Log.e(TAG, "部分或全部蓝牙权限被拒绝");
                 Toast.makeText(this, "需要蓝牙权限才能使用此功能", Toast.LENGTH_SHORT).show();
                 finish();
+            }
+        } else if (requestCode == REQUEST_BLUETOOTH_CONNECT_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "蓝牙连接权限已授予");
+                // 重新尝试打印
+                printTestReceipt();
+            } else {
+                Log.e(TAG, "蓝牙连接权限被拒绝");
+                Toast.makeText(this, "需要蓝牙连接权限才能打印", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -336,5 +372,96 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
         super.onDestroy();
         cancelDiscovery();
         unregisterReceiver(mFindBlueToothReceiver);
+    }
+
+    private void printTestReceipt() {
+        Log.d(TAG, "开始打印测试小票");
+        try {
+            // 检查权限
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) 
+                        != PackageManager.PERMISSION_GRANTED) {
+                    Log.e(TAG, "缺少蓝牙连接权限");
+                    Toast.makeText(this, "缺少蓝牙连接权限", Toast.LENGTH_SHORT).show();
+                    ActivityCompat.requestPermissions(this, 
+                        new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 
+                        REQUEST_BLUETOOTH_CONNECT_PERMISSION);
+                    return;
+                }
+            }
+
+            // 检查MAC地址
+            if (mSelectedMacAddress == null) {
+                Log.e(TAG, "未获取到蓝牙设备地址");
+                Toast.makeText(this, "未获取到蓝牙设备地址", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            Log.d(TAG, "初始化打印机管理器，MAC地址: " + mSelectedMacAddress);
+            try {
+                // 关闭之前的连接
+                if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0] != null) {
+                    DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].closePort(0);
+                }
+
+                // 建立新的蓝牙连接
+                new DeviceConnFactoryManager.Build()
+                        .setId(0)
+                        .setConnMethod(DeviceConnFactoryManager.CONN_METHOD.BLUETOOTH)
+                        .setMacAddress(mSelectedMacAddress)
+                        .setContext(this)
+                        .build();
+                DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].openPort();
+                Log.d(TAG, "打印机管理器初始化成功");
+            } catch (Exception e) {
+                Log.e(TAG, "打印机管理器初始化失败", e);
+                Toast.makeText(this, "打印机连接失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // 检查打印机状态
+            if (!DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].getConnState()) {
+                Log.e(TAG, "打印机未连接");
+                Toast.makeText(this, "打印机未连接", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            Log.d(TAG, "创建LabelCommand对象");
+            LabelCommand tsc = new LabelCommand();
+            tsc.addSize(40, 30); // 设置标签大小
+            tsc.addGap(2); // 设置标签间隙
+            tsc.addCls(); // 清除缓冲区
+            tsc.addDirection(LabelCommand.DIRECTION.FORWARD, LabelCommand.MIRROR.NORMAL); // 设置打印方向
+            tsc.addReference(0, 0); // 设置参考点
+            tsc.addHome(); // 设置打印位置
+            tsc.addDensity(LabelCommand.DENSITY.DNESITY4); // 设置打印浓度
+
+            // 添加文本
+            tsc.addText(50, 50, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, LabelCommand.ROTATION.ROTATION_0, LabelCommand.FONTMUL.MUL_1, LabelCommand.FONTMUL.MUL_1, "测试小票");
+            tsc.addText(50, 100, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, LabelCommand.ROTATION.ROTATION_0, LabelCommand.FONTMUL.MUL_1, LabelCommand.FONTMUL.MUL_1, "蓝牙连接测试");
+            tsc.addText(50, 150, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, LabelCommand.ROTATION.ROTATION_0, LabelCommand.FONTMUL.MUL_1, LabelCommand.FONTMUL.MUL_1, "时间: " + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date()));
+            tsc.addText(50, 200, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, LabelCommand.ROTATION.ROTATION_0, LabelCommand.FONTMUL.MUL_1, LabelCommand.FONTMUL.MUL_1, "设备: " + mBluetoothAdapter.getName());
+            tsc.addText(50, 250, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, LabelCommand.ROTATION.ROTATION_0, LabelCommand.FONTMUL.MUL_1, LabelCommand.FONTMUL.MUL_1, "测试打印成功！");
+
+            tsc.addPrint(1, 1); // 设置打印份数
+            tsc.addSound(2, 100); // 设置蜂鸣器
+            tsc.addCashdrwer(LabelCommand.FOOT.F5, 255, 255); // 设置钱箱
+            
+            Log.d(TAG, "获取打印命令数据");
+            Vector<Byte> datas = tsc.getCommand();
+            
+            try {
+                Log.d(TAG, "准备发送打印数据");
+                DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].sendDataImmediately(datas);
+                Log.d(TAG, "数据发送成功");
+                Toast.makeText(this, "测试小票打印成功", Toast.LENGTH_SHORT).show();
+            } catch (Exception e) {
+                Log.e(TAG, "发送数据失败", e);
+                Toast.makeText(this, "发送数据失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "打印测试小票失败", e);
+            Toast.makeText(this, "打印测试小票失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
     }
 } 

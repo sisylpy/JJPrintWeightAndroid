@@ -263,6 +263,14 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
             }
         });
 
+        // 设置商品适配器的订单确认监听器
+        goodsAdapter.setOnOrderConfirmListener(orderList -> {
+            Log.d(TAG, "收到订单确认，开始打印和保存");
+            if (orderList != null && !orderList.isEmpty()) {
+                printAndSaveOrders(orderList, 0);
+            }
+        });
+
         // 部门按钮点击事件
         btnToDep.setOnClickListener(v -> {
             Log.d(TAG, "部门按钮被点击");
@@ -450,13 +458,16 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
 
     // 4. 打印实现（只打印商品名称和出库数量）
     private void printOrder(NxDepartmentOrdersEntity order, PrintCallback callback) {
+        Log.d(TAG, "开始打印订单");
         if (isEmulator()) {
+            Log.d(TAG, "模拟器环境，跳过打印");
             callback.onPrintFail("模拟器环境，跳过打印");
             return;
         }
 
         // 检查打印机状态
         if (!checkPrinterStatus()) {
+            Log.e(TAG, "打印机未就绪");
             callback.onPrintFail("打印机未就绪，请检查连接");
             return;
         }
@@ -464,12 +475,16 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
         ThreadPool.getInstantiation().addTask(() -> {
             try {
                 PrinterCommand commandType = DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].getCurrentPrinterCommand();
+                Log.d(TAG, "打印机指令类型: " + commandType);
                 
                 if (commandType == PrinterCommand.ESC) {
+                    Log.d(TAG, "使用ESC指令打印");
                     printWithESC(order, callback);
                 } else if (commandType == PrinterCommand.TSC) {
+                    Log.d(TAG, "使用TSC指令打印");
                     printWithTSC(order, callback);
                 } else {
+                    Log.e(TAG, "不支持的打印机指令集: " + commandType);
                     callback.onPrintFail("不支持的打印机指令集");
                 }
             } catch (Exception e) {
@@ -517,48 +532,68 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     }
 
     private void printWithTSC(NxDepartmentOrdersEntity order, PrintCallback callback) throws Exception {
-        LabelCommand tsc = new LabelCommand();
-        tsc.addTear(EscCommand.ENABLE.ON);
-        tsc.addSize(50, 80);
-        tsc.addGap(10);
-        tsc.addDirection(LabelCommand.DIRECTION.FORWARD, LabelCommand.MIRROR.NORMAL);
-        tsc.addReference(0, 0);
-        tsc.addCls();
-        
-        // 部门名称
-        String departmentName = getDepartmentName(order);
-        tsc.addText(50, 550, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, 
-            LabelCommand.ROTATION.ROTATION_270, LabelCommand.FONTMUL.MUL_2, 
-            LabelCommand.FONTMUL.MUL_2, departmentName);
-        
-        // 商品信息
-        String goodsName = order.getNxDistributerGoodsEntity().nxDgGoodsName;
-        String standardName = order.getNxDistributerGoodsEntity().nxDgGoodsStandardname;
-        String quantity = order.getNxDoWeight() != null ? order.getNxDoWeight().toString() : "0";
-        tsc.addText(120, 550, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, 
-            LabelCommand.ROTATION.ROTATION_270, LabelCommand.FONTMUL.MUL_2, 
-            LabelCommand.FONTMUL.MUL_2, goodsName + " " + quantity + standardName);
-        
-        // 订货信息
-        String orderQuantity = order.getNxDoQuantity() != null ? order.getNxDoQuantity().toString() : "0";
-        tsc.addText(190, 550, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, 
-            LabelCommand.ROTATION.ROTATION_270, LabelCommand.FONTMUL.MUL_2, 
-            LabelCommand.FONTMUL.MUL_2, "订货: " + orderQuantity + order.getNxDoStandard());
-        
-        // 备注
-        String remark = order.getNxDoRemark();
-        if (remark != null && !remark.isEmpty()) {
-            tsc.addText(260, 550, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, 
-                LabelCommand.ROTATION.ROTATION_270, LabelCommand.FONTMUL.MUL_1, 
-                LabelCommand.FONTMUL.MUL_1, "备注: " + remark);
+        Log.d(TAG, "开始使用TSC指令打印");
+        try {
+            LabelCommand tsc = new LabelCommand();
+            Log.d(TAG, "创建LabelCommand对象成功");
+            
+            // 设置标签参数
+            tsc.addSize(50, 80);
+            tsc.addGap(10);
+            tsc.addDirection(LabelCommand.DIRECTION.FORWARD, LabelCommand.MIRROR.NORMAL);
+            tsc.addReference(0, 0);
+            tsc.addCls();
+            Log.d(TAG, "设置标签参数成功");
+            
+            // 部门名称
+            String departmentName = getDepartmentName(order);
+            Log.d(TAG, "部门名称: " + departmentName);
+            tsc.addText(50, 550, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, 
+                LabelCommand.ROTATION.ROTATION_270, LabelCommand.FONTMUL.MUL_2, 
+                LabelCommand.FONTMUL.MUL_2, departmentName);
+            
+            // 商品信息
+            String goodsName = order.getNxDistributerGoodsEntity().nxDgGoodsName;
+            String standardName = order.getNxDistributerGoodsEntity().nxDgGoodsStandardname;
+            String quantity = order.getNxDoWeight() != null ? order.getNxDoWeight().toString() : "0";
+            Log.d(TAG, "商品信息: " + goodsName + ", 规格: " + standardName + ", 数量: " + quantity);
+            
+            tsc.addText(120, 550, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, 
+                LabelCommand.ROTATION.ROTATION_270, LabelCommand.FONTMUL.MUL_2, 
+                LabelCommand.FONTMUL.MUL_2, goodsName + " " + quantity + standardName);
+            
+            // 订货信息
+            String orderQuantity = order.getNxDoQuantity() != null ? order.getNxDoQuantity().toString() : "0";
+            Log.d(TAG, "订货数量: " + orderQuantity);
+            tsc.addText(190, 550, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, 
+                LabelCommand.ROTATION.ROTATION_270, LabelCommand.FONTMUL.MUL_2, 
+                LabelCommand.FONTMUL.MUL_2, "订货: " + orderQuantity + order.getNxDoStandard());
+            
+            // 备注
+            String remark = order.getNxDoRemark();
+            if (remark != null && !remark.isEmpty()) {
+                Log.d(TAG, "备注: " + remark);
+                tsc.addText(260, 550, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, 
+                    LabelCommand.ROTATION.ROTATION_270, LabelCommand.FONTMUL.MUL_1, 
+                    LabelCommand.FONTMUL.MUL_1, "备注: " + remark);
+            }
+            
+            tsc.addPrint(1, 1);
+            tsc.addSound(2, 100);
+            tsc.addCashdrwer(LabelCommand.FOOT.F5, 255, 255);
+            
+            Log.d(TAG, "获取打印命令数据");
+            Vector<Byte> datas = tsc.getCommand();
+            if (datas == null || datas.isEmpty()) {
+                throw new Exception("生成的打印命令数据为空");
+            }
+            Log.d(TAG, "打印命令数据大小: " + datas.size());
+            
+            sendPrintData(datas, callback);
+        } catch (Exception e) {
+            Log.e(TAG, "生成TSC打印命令失败", e);
+            throw new Exception("生成TSC打印命令失败: " + e.getMessage());
         }
-        
-        tsc.addPrint(1, 1);
-        tsc.addSound(2, 100);
-        tsc.addCashdrwer(LabelCommand.FOOT.F5, 255, 255);
-        
-        Vector<Byte> datas = tsc.getCommand();
-        sendPrintData(datas, callback);
     }
 
     private String getDepartmentName(NxDepartmentOrdersEntity order) {
@@ -571,15 +606,31 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     }
 
     private void sendPrintData(Vector<Byte> datas, PrintCallback callback) throws Exception {
-        if (!DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].getConnState()) {
-            callback.onPrintFail("打印机连接已断开");
-            return;
+        Log.d(TAG, "开始发送打印数据");
+        try {
+            if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0] == null) {
+                throw new Exception("打印机管理器未初始化");
+            }
+            
+            if (!DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].getConnState()) {
+                throw new Exception("打印机未连接");
+            }
+            
+            Log.d(TAG, "发送打印数据到打印机");
+            DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].sendDataImmediately(datas);
+            Log.d(TAG, "打印数据发送成功");
+            
+            callback.onPrintSuccess();
+            Log.d(TAG, "打印回调成功");
+            
+            runOnUiThread(() -> {
+                loadData();
+                Toast.makeText(this, "打印成功", Toast.LENGTH_SHORT).show();
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "发送打印数据失败", e);
+            throw new Exception("发送打印数据失败: " + e.getMessage());
         }
-        
-        DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].sendDataImmediately(datas);
-        callback.onPrintSuccess();
-        
-        runOnUiThread(() -> loadData());
     }
 
     private void handlePrintError(Exception e, PrintCallback callback) {
