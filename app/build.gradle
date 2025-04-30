@@ -1,0 +1,75 @@
+apply plugin: 'com.android.application'
+def AAVersion = '4.6.0'
+
+android {
+
+    compileSdkVersion 34
+
+    defaultConfig {
+        applicationId "com.swolo.lpy.pysx"
+//        minSdkVersion 26
+//        targetSdkVersion 26
+        minSdkVersion 16
+        targetSdkVersion 33
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        vectorDrawables.useSupportLibrary = true
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    //这里是配置JNI的引用地址，也就是引用.so文件
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['libs']
+        }
+    }
+    namespace 'com.swolo.lpy.pysx'
+//
+    //cofigurations.all {
+    //    resolutionStrategy.force 'com.android.support:support-annotations:26.0.0'
+    //}
+
+    lintOptions {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'junit:junit:4.12'
+    implementation 'com.android.support:appcompat-v7:26.0.0'
+    implementation 'com.android.support:design:26.0.0'
+    implementation 'com.android.support.constraint:constraint-layout:1.0.2'
+    implementation 'org.androidannotations:androidannotations-api:4.3.1'
+    implementation 'com.android.support:cardview-v7:26.0.0'
+    implementation 'com.android.support:recyclerview-v7:26.0.0'
+    implementation 'de.greenrobot:eventbus:3.0.0-beta1'
+    implementation 'com.nineoldandroids:library:2.4.0'
+
+    implementation 'com.squareup.okhttp3:okhttp:3.10.0'
+    implementation 'io.reactivex:rxandroid:1.2.1'
+    implementation 'io.reactivex:rxjava:1.1.6'
+    //Retrofit
+    implementation 'com.squareup.retrofit2:retrofit: 2.1.0'
+    implementation 'com.squareup.retrofit2:adapter-rxjava:2.1.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.1.0'
+    androidTestImplementation 'com.android.support.test:runner:1.0.1'
+    annotationProcessor "org.androidannotations:androidannotations:$AAVersion"
+    implementation "org.androidannotations:androidannotations-api:$AAVersion"
+
+    implementation files('libs/printersdkv1.jar')
+//    implementation group: 'com.google.firebase', name: 'firebase-appindexing', version: '16.0.2'
+//    compile group: 'com.android.support.constraint', name: 'constraint-layout', version: '1.0.0'
+//    compile  'com.android.support:support-v7:26+'
+//    implementation  'com.android.support:support-v4:26+'
+
+
+}

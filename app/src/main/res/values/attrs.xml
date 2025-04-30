@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="ProgressWheel">
+        <attr name="matProg_progressIndeterminate" format="boolean" />
+        <attr name="matProg_barColor" format="color" />
+        <attr name="matProg_rimColor" format="color" />
+        <attr name="matProg_rimWidth" format="dimension" />
+        <attr name="matProg_spinSpeed" format="float" />
+        <attr name="matProg_barSpinCycleTime" format="integer" />
+        <attr name="matProg_circleRadius" format="dimension" />
+        <attr name="matProg_fillRadius" format="boolean" />
+        <attr name="matProg_barWidth" format="dimension" />
+        <attr name="matProg_linearProgress" format="boolean" />
+    </declare-styleable>
+    <declare-styleable name="FlowLayout">
+        <attr name="horizontalSpacing" format="dimension"/>
+        <attr name="verticalSpacing" format="dimension"/>
+        <attr name="orientation" format="enum">
+            <enum name="horizontal" value="0"/>
+            <enum name="vertical" value="1"/>
+        </attr>
+        <attr name="debugDraw" format="boolean"/>
+    </declare-styleable>
+    <declare-styleable name="FlowLayout_LayoutParams">
+        <attr name="layout_newLine" format="boolean"/>
+        <attr name="layout_horizontalSpacing" format="dimension"/>
+        <attr name="layout_verticalSpacing" format="dimension"/>
+    </declare-styleable>
+    <declare-styleable name="NiceSpinner">
+        <attr name="arrowTint" format="color" />
+        <attr name="hideArrow" format="boolean" />
+        <attr name="backgroundSelector" format="integer"/>
+        <attr name="textTint" format="color"/>
+    </declare-styleable>
+    <declare-styleable name="ChoosePicturesView">
+        <attr name="gravity">
+            <enum name="center" value="0"/>
+            <enum name="fill" value="1"/>
+        </attr>
+        <attr name="line_count" format="integer"/>
+        <attr name="picture_show_size" format="dimension"/>
+        <attr name="max_picture_count" format="integer"/>
+        <attr name="guide_tips" format="string|reference"/>
+    </declare-styleable>
+    <declare-styleable name="EditTextView">
+        <attr name="textColor" format="color"/>
+        <attr name="textSize" format="dimension"/>
+    </declare-styleable>
+    <declare-styleable name="SlidingTabLayout">
+    <attr name="textViewFocusColor" format="color"></attr>
+    <attr name="textViewDefaultColor" format="color"></attr>
+    </declare-styleable>
+
+</resources>

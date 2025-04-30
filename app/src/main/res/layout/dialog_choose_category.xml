@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginLeft="24dp"
+        android:layout_marginRight="24dp"
+        android:gravity="center_horizontal"
+        android:background="@color/white">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/green"
+            android:text="@string/choose_business_category"
+            android:gravity="center_vertical"
+            android:textColor="@color/white"
+            android:textSize="@dimen/text_size_14"
+            android:padding="12dp"/>
+        <ListView
+            android:id="@+id/lv_category"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none"
+            android:listSelector="@drawable/listview_selector"
+            android:cacheColorHint="@color/transparent"
+            android:divider="@color/text_light_gray"
+            android:dividerHeight="0.5dp">
+
+        </ListView>
+    </LinearLayout>
+</LinearLayout>

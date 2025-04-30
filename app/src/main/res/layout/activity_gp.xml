@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".main.gp.GpActivity">
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:orientation="vertical">
+
+
+
+
+                <Button
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:onClick="btnUsbConn"
+                    android:text="@string/str_usb_connect"/>
+
+
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tv_connState"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:layout_marginTop="8dp"
+                android:text="@string/str_conn_state_disconnect"
+                android:textSize="14sp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical">
+
+
+
+                <Button
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:onClick="btnLabelPrint"
+                    android:text="@string/str_label_print"/>
+
+                <Button
+                    android:id="@+id/to_main"
+                    android:text="toMain"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+
+
+                <!--<LinearLayout-->
+                    <!--android:layout_width="match_parent"-->
+                    <!--android:layout_height="wrap_content"-->
+                    <!--android:orientation="horizontal">-->
+
+
+
+                    <!--<Spinner-->
+                        <!--android:id="@+id/mode_sp"-->
+                        <!--android:layout_width="0dp"-->
+                        <!--android:layout_height="match_parent"-->
+                        <!--android:layout_weight="2"-->
+                        <!--android:spinnerMode="dialog"-->
+                        <!--/>-->
+                <!--</LinearLayout>-->
+
+
+
+
+                <!--<Button-->
+                <!--android:layout_width="match_parent"-->
+                <!--android:layout_height="wrap_content"-->
+                <!--android:onClick="btnceshi"-->
+                <!--android:text="测试"/>-->
+
+            </LinearLayout>
+            <!--<TextView-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="150dp"-->
+            <!--android:id="@+id/tv_read"/>-->
+            <!--<LinearLayout-->
+                <!--android:layout_width="match_parent"-->
+                <!--android:layout_height="wrap_content"-->
+                <!--android:orientation="horizontal">-->
+
+                <!--<TextView-->
+                    <!--android:layout_width="100dp"-->
+                    <!--android:layout_height="match_parent"-->
+                    <!--android:gravity="center"-->
+                    <!--android:text="@string/str_tv_printcount"-->
+                    <!--android:textSize="15dp"/>-->
+
+                <!--<EditText-->
+                    <!--android:id="@+id/et_print_counts"-->
+                    <!--android:layout_width="match_parent"-->
+                    <!--android:layout_height="wrap_content"-->
+                    <!--android:hint=""-->
+                    <!--android:inputType="number"/>-->
+            <!--</LinearLayout>-->
+
+
+
+
+        </LinearLayout>
+    </ScrollView>
+
+</LinearLayout>
