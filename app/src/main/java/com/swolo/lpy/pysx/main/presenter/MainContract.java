@@ -22,6 +22,8 @@ public interface MainContract {
         void getStockGoodsFail(String error);
         void onStockOutFinishSuccess();
         void onStockOutFinishFail(String error);
+        void showLoading();  // 显示加载遮罩
+        void hideLoading();  // 隐藏加载遮罩
     }
 
     interface StockOutPresenter {

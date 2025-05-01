@@ -29,6 +29,10 @@ public class StockOutPresenterImpl implements MainContract.StockOutPresenter {
 
     @Override
     public void getStockGoods(Integer disId, Integer goodsType) {
+        if (mView != null) {
+            mView.showLoading();
+        }
+        
         HttpManager.getInstance()
             .request(
                 HttpManager.getInstance().getApi(GoodsApi.class).pickerGetStockGoodsKf(disId, goodsType),
@@ -40,12 +44,16 @@ public class StockOutPresenterImpl implements MainContract.StockOutPresenter {
                 @Override
                 public void onCompleted() {
                     Log.d(TAG, "数据加载完成");
+                    if (mView != null) {
+                        mView.hideLoading();
+                    }
                 }
 
                 @Override
                 public void onError(Throwable e) {
                     Log.e(TAG, "加载失败: " + e.getMessage());
                     if (mView != null) {
+                        mView.hideLoading();
                         mView.getStockGoodsFail(e.getMessage());
                     }
                 }
@@ -120,6 +128,10 @@ public class StockOutPresenterImpl implements MainContract.StockOutPresenter {
 
     @Override
     public void getStockGoodsWithDepIds(Context context, int nxDepId, int gbDepId, int disId, int goodsType) {
+        if (mView != null) {
+            mView.showLoading();
+        }
+        
         Log.d(TAG, "开始获取带部门ID的库存商品数据: nxDepId=" + nxDepId + ", gbDepId=" + gbDepId + 
               ", disId=" + disId + ", goodsType=" + goodsType);
         
@@ -151,12 +163,16 @@ public class StockOutPresenterImpl implements MainContract.StockOutPresenter {
                 @Override
                 public void onCompleted() {
                     Log.d(TAG, "带部门ID的库存商品数据加载完成");
+                    if (mView != null) {
+                        mView.hideLoading();
+                    }
                 }
 
                 @Override
                 public void onError(Throwable e) {
                     Log.e(TAG, "带部门ID的库存商品数据加载失败: " + e.getMessage());
                     if (mView != null) {
+                        mView.hideLoading();
                         mView.getStockGoodsFail(e.getMessage());
                     }
                 }

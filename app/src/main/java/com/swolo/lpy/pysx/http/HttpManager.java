@@ -38,8 +38,8 @@ public class HttpManager {
     private static SoftReference<HttpManager> _instance;
     private Retrofit retrofit;
     //    public static final String BASE_URL = "http://120.27.19.17:8089/TasteSource/";
-   public static final String BASE_URL = "https://grainservice.club:8443/nongxinle/";
-    // public static final String BASE_URL = "http://192.168.0.102:8080/nongxinle_master_war_exploded/";
+//   public static final String BASE_URL = "https://grainservice.club:8443/nongxinle/";
+     public static final String BASE_URL = "http://192.168.0.102:8080/nongxinle_master_war_exploded/";
 //    public static final String BASE_URL = "http://192.168.43.163:8080/nongxinle_master_war_exploded/";
 
 

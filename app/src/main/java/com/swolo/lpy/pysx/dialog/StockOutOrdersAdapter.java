@@ -14,6 +14,7 @@ import com.swolo.lpy.pysx.R;
 import com.swolo.lpy.pysx.main.modal.NxDepartmentOrdersEntity;
 import com.swolo.lpy.pysx.main.modal.NxDistributerGoodsShelfGoodsEntity;
 import com.swolo.lpy.pysx.main.modal.NxDepartmentEntity;
+import com.swolo.lpy.pysx.main.modal.GbDepartmentEntity;
 
 import java.util.List;
 
@@ -37,17 +38,32 @@ public class StockOutOrdersAdapter extends RecyclerView.Adapter<StockOutOrdersAd
         NxDepartmentOrdersEntity order = ordersList.get(position);
         
         // 设置部门名称
-        if (order != null && order.getNxDepartmentEntity() != null) {
-            NxDepartmentEntity department = order.getNxDepartmentEntity();
-            if (department.getFatherDepartmentEntity() != null) {
-                holder.departmentName.setText(String.format("(%s)%s.%s",
-                        department.getFatherDepartmentEntity().getNxDepartmentAttrName(),
-                        department.getFatherDepartmentEntity().getNxDepartmentName(),
-                        department.getNxDepartmentName()));
-            } else {
-                holder.departmentName.setText(String.format("(%s)%s",
-                        department.getNxDepartmentAttrName(),
-                        department.getNxDepartmentName()));
+        if (order != null) {
+            if (order.getNxDepartmentEntity() != null) {
+                NxDepartmentEntity department = order.getNxDepartmentEntity();
+                if (department.getFatherDepartmentEntity() != null) {
+                    holder.departmentName.setText(String.format("(%s)%s.%s",
+                            department.getFatherDepartmentEntity().getNxDepartmentAttrName(),
+                            department.getFatherDepartmentEntity().getNxDepartmentName(),
+                            department.getNxDepartmentName()));
+                } else {
+                    holder.departmentName.setText(String.format("(%s)%s",
+                            department.getNxDepartmentAttrName(),
+                            department.getNxDepartmentName()));
+                }
+            } else if (order.getGbDepartmentEntity() != null) {
+                GbDepartmentEntity department = order.getGbDepartmentEntity();
+                if (department.getFatherGbDepartmentEntity() != null && 
+                    department.getFatherGbDepartmentEntity().getGbDepartmentSubAmount() > 1) {
+                    holder.departmentName.setText(String.format("(%s)%s.%s",
+                            department.getFatherGbDepartmentEntity().getGbDepartmentAttrName(),
+                            department.getFatherGbDepartmentEntity().getGbDepartmentName(),
+                            department.getGbDepartmentName()));
+                } else {
+                    holder.departmentName.setText(String.format("(%s)%s",
+                            department.getGbDepartmentAttrName(),
+                            department.getGbDepartmentName()));
+                }
             }
         } else {
             holder.departmentName.setText("");

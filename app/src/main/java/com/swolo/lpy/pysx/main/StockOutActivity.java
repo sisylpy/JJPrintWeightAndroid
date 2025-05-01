@@ -27,12 +27,14 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.app.ProgressDialog;
 
 import com.swolo.lpy.pysx.R;
 import com.swolo.lpy.pysx.main.adapter.StockOutAdapter;
 import com.swolo.lpy.pysx.main.adapter.StockOutGoodsAdapter;
 import com.swolo.lpy.pysx.main.adapter.StockOutShelfAdapter;
 import com.swolo.lpy.pysx.main.gp.Constant;
+import com.swolo.lpy.pysx.main.modal.GbDepartmentEntity;
 import com.swolo.lpy.pysx.main.modal.NxDepartmentEntity;
 import com.swolo.lpy.pysx.main.modal.NxDepartmentOrdersEntity;
 import com.swolo.lpy.pysx.main.modal.NxDistributerGoodsShelfEntity;
@@ -60,6 +62,7 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     private StockOutShelfAdapter shelfAdapter;
     private StockOutGoodsAdapter goodsAdapter;
     private StockOutPresenterImpl stockOutPresenter;
+    private int currentShelfIndex = 0; // 添加当前选中的货架索引
 
     // 设置默认值
     private Integer disId;  // 将从用户信息中获取
@@ -99,6 +102,8 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     private BluetoothAdapter bluetoothAdapter;
 
     private boolean isFromDepartmentSelection = false;
+
+    private ProgressDialog progressDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -274,21 +279,6 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
                 }
             });
 
-            // 部门按钮
-//            btnToDep = stockOutLayout.findViewById(R.id.btn_dep);
-//            if (btnToDep != null) {
-//                // 设置按钮样式
-//                btnToDep.setBackgroundResource(android.R.color.transparent);
-//                btnToDep.setPadding(8, 8, 8, 8);
-//            }
-
-            // 获取打印机信息视图
-//            tvPrinterInfo = stockOutLayout.findViewById(R.id.tv_printer_info);
-//            if (tvPrinterInfo != null) {
-//                tvPrinterInfo.setTextSize(12);
-//                tvPrinterInfo.setTextColor(getResources().getColor(android.R.color.darker_gray));
-//                updatePrinterInfo(); // 立即更新打印机信息
-//            }
 
             Log.d(TAG, "视图初始化完成");
         } catch (Exception e) {
@@ -322,10 +312,14 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
 
     @Override
     protected void bindAction() {
+        Log.d(TAG, "开始绑定事件");
         shelfAdapter.setOnItemClickListener(new StockOutShelfAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(NxDistributerGoodsShelfEntity entity) {
-                // 点击货架，展示对应货架下的商品
+                // 保存当前选中的货架索引
+                currentShelfIndex = shelfAdapter.getSelectedPosition();
+                Log.d(TAG, "货架点击，保存索引: " + currentShelfIndex + ", 货架名称: " + entity.getNxDistributerGoodsShelfName());
+                // 显示对应货架下的商品
                 goodsAdapter.setGoodsList(entity.getNxDisGoodsShelfGoodsEntities());
             }
         });
@@ -338,15 +332,6 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
             }
         });
 
-        // 部门按钮点击事件
-//        btnToDep.setOnClickListener(v -> {
-//            Log.d(TAG, "部门按钮被点击");
-//            Intent intent = new Intent(this, DepartmentListActivity.class);
-//            intent.putExtra("disId", disId);
-//            intent.putExtra("goodsType", goodsType);
-//            startActivityForResult(intent, 1001);
-//        });
-
         btnClearNxDep.setOnClickListener(v -> {
             clearNxDepartmentSelection();
             loadData();
@@ -356,6 +341,7 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
             clearGbDepartmentSelection();
             loadData();
         });
+        Log.d(TAG, "事件绑定完成");
     }
 
     @Override
@@ -450,7 +436,8 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     @Override
     public void getStockGoodsSuccess(List<NxDistributerGoodsShelfEntity> outGoods) {
         stopLoading();
-        Log.d(TAG, "getStockGoodsSuccess: 收到数据，数量=" + (outGoods != null ? outGoods.size() : 0));
+        Log.d(TAG, "getStockGoodsSuccess: 收到数据，数量=" + (outGoods != null ? outGoods.size() : 0) + 
+              ", 当前选中索引=" + currentShelfIndex);
         
         if (outGoods == null || outGoods.isEmpty()) {
             tvNoData.setVisibility(View.VISIBLE);
@@ -463,8 +450,29 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
             }
         } else {
             tvNoData.setVisibility(View.GONE);
+            
+            // 保存当前选中的货架索引
+            int oldShelfIndex = currentShelfIndex;
+            Log.d(TAG, "保存旧的货架索引: " + oldShelfIndex);
+            
+            // 更新数据
             shelfAdapter.setData(outGoods);
-            goodsAdapter.setGoodsList(outGoods.get(0).getNxDisGoodsShelfGoodsEntities());
+            
+            // 确保索引在有效范围内
+            if (oldShelfIndex >= 0 && oldShelfIndex < outGoods.size()) {
+                // 恢复之前选中的货架
+                currentShelfIndex = oldShelfIndex;
+                Log.d(TAG, "恢复货架索引: " + currentShelfIndex);
+                shelfAdapter.setSelectedPosition(currentShelfIndex);
+                // 显示对应货架的商品
+                goodsAdapter.setGoodsList(outGoods.get(currentShelfIndex).getNxDisGoodsShelfGoodsEntities());
+            } else {
+                // 如果索引无效，显示第一个货架的商品
+                currentShelfIndex = 0;
+                Log.d(TAG, "重置货架索引为0");
+                shelfAdapter.setSelectedPosition(0);
+                goodsAdapter.setGoodsList(outGoods.get(0).getNxDisGoodsShelfGoodsEntities());
+            }
         }
     }
 
@@ -497,8 +505,18 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
         if (index >= orderList.size()) {
             runOnUiThread(() -> {
                 Toast.makeText(this, "订单打印并保存成功", Toast.LENGTH_SHORT).show();
+                // 保存当前选中的货架索引
+                int savedIndex = currentShelfIndex;
+                Log.d(TAG, "打印完成，保存当前索引: " + savedIndex);
                 // 刷新数据
                 loadData();
+                // 恢复索引
+                currentShelfIndex = savedIndex;
+                Log.d(TAG, "恢复保存的索引: " + currentShelfIndex);
+                // 确保适配器也更新选中位置
+                if (shelfAdapter != null) {
+                    shelfAdapter.setSelectedPosition(savedIndex);
+                }
             });
             return;
         }
@@ -512,18 +530,25 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
                     new MainContract.SaveCallback() {
                         @Override
                         public void onSaveSuccess() {
+                            // 保存成功，继续处理下一个订单
                             printAndSaveOrders(orderList, index + 1);
                         }
                         @Override
                         public void onSaveFail(String error) {
-                            runOnUiThread(() -> Toast.makeText(StockOutActivity.this, "保存失败: " + error, Toast.LENGTH_SHORT).show());
+                            runOnUiThread(() -> {
+                                Toast.makeText(StockOutActivity.this, "保存失败: " + error, Toast.LENGTH_SHORT).show();
+                                // 保存失败，停止处理
+                            });
                         }
                     }
                 );
             }
             @Override
             public void onPrintFail(String error) {
-                runOnUiThread(() -> Toast.makeText(StockOutActivity.this, "打印失败: " + error, Toast.LENGTH_SHORT).show());
+                runOnUiThread(() -> {
+                    Toast.makeText(StockOutActivity.this, "打印失败: " + error + "，订单未保存", Toast.LENGTH_SHORT).show();
+                    // 打印失败，停止处理
+                });
             }
         });
     }
@@ -680,21 +705,37 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     }
 
     private String getDepartmentName(NxDepartmentOrdersEntity order) {
-        if (order != null && order.getNxDepartmentEntity() != null) {
-            NxDepartmentEntity department = order.getNxDepartmentEntity();
-            if (department.getFatherDepartmentEntity() != null) {
-                return String.format("(%s)%s.%s",
-                        department.getFatherDepartmentEntity().getNxDepartmentAttrName(),
-                        department.getFatherDepartmentEntity().getNxDepartmentName(),
-                        department.getNxDepartmentName());
-            } else {
-                return String.format("(%s)%s",
-                        department.getNxDepartmentAttrName(),
-                        department.getNxDepartmentName());
+        if (order != null) {
+            if(order.getNxDepartmentEntity() != null){
+
+                NxDepartmentEntity department = order.getNxDepartmentEntity();
+                if (department.getFatherDepartmentEntity() != null) {
+                    return String.format("(%s)%s.%s",
+                            department.getFatherDepartmentEntity().getNxDepartmentAttrName(),
+                            department.getFatherDepartmentEntity().getNxDepartmentName(),
+                            department.getNxDepartmentName());
+                } else {
+                    return String.format("(%s)%s",
+                            department.getNxDepartmentAttrName(),
+                            department.getNxDepartmentName());
+                }
+
+            }else if(order.getGbDepartmentEntity() != null){
+                GbDepartmentEntity department = order.getGbDepartmentEntity();
+                if (department.getFatherGbDepartmentEntity() != null &&
+                        department.getFatherGbDepartmentEntity().getGbDepartmentSubAmount() > 1) {
+                   return String.format("(%s)%s.%s",
+                            department.getFatherGbDepartmentEntity().getGbDepartmentAttrName(),
+                            department.getFatherGbDepartmentEntity().getGbDepartmentName(),
+                            department.getGbDepartmentName());
+                } else {
+                    return  String.format("(%s)%s",
+                            department.getGbDepartmentAttrName(),
+                            department.getGbDepartmentName());
+                }
             }
-        } else if (order.getGbDepartmentEntity() != null) {
-            return order.getGbDepartmentEntity().getGbDepartmentAttrName();
         }
+
         return "";
     }
 
@@ -881,6 +922,8 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
                 String connMethod = "未知";
                 if (deviceManager.getConnMethod() == DeviceConnFactoryManager.CONN_METHOD.USB) {
                     connMethod = "USB";
+                } else if (deviceManager.getConnMethod() == DeviceConnFactoryManager.CONN_METHOD.BLUETOOTH) {
+                    connMethod = "蓝牙";
                 }
                 info.append("连接方式: ").append(connMethod).append("\n");
                 
@@ -890,6 +933,12 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
                     String printerAddress = sp.getString("printer_address", null);
                     if (printerAddress != null) {
                         info.append("设备地址: ").append(printerAddress).append("\n");
+                    }
+                } else if (deviceManager.getConnMethod() == DeviceConnFactoryManager.CONN_METHOD.BLUETOOTH) {
+                    SharedPreferences sp = getSharedPreferences("printer_cache", MODE_PRIVATE);
+                    String printerAddress = sp.getString("printer_address", null);
+                    if (printerAddress != null) {
+                        info.append("蓝牙地址: ").append(printerAddress).append("\n");
                     }
                 }
                 
@@ -1092,6 +1141,10 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
             threadPool.stopThreadPool();
             threadPool = null;
         }
+        if (progressDialog != null) {
+            progressDialog.dismiss();
+            progressDialog = null;
+        }
     }
 
     @Override
@@ -1127,7 +1180,7 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     protected void onResume() {
         super.onResume();
         Log.d(TAG, "onResume: 页面显示，刷新数据");
-        Log.d(TAG, "onResume: 当前Activity状态 - isFinishing=" + isFinishing() + ", isDestroyed=" + isDestroyed());
+        Log.d(TAG, "onResume: 当前Activity状态 - isFinishing=" + isFinishing() + ", isDestroyed=");
         
         try {
             // 确保printerHandler已初始化
@@ -1346,6 +1399,25 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     public void stopLoading() {
         if (swipeRefreshLayout != null) {
             swipeRefreshLayout.setRefreshing(false);
+        }
+    }
+
+    @Override
+    public void showLoading() {
+        if (progressDialog == null) {
+            progressDialog = new ProgressDialog(this);
+            progressDialog.setMessage("加载中...");
+            progressDialog.setCancelable(false);
+        }
+        if (!progressDialog.isShowing()) {
+            progressDialog.show();
+        }
+    }
+
+    @Override
+    public void hideLoading() {
+        if (progressDialog != null && progressDialog.isShowing()) {
+            progressDialog.dismiss();
         }
     }
 }

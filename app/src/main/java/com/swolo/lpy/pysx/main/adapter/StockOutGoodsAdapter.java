@@ -8,6 +8,7 @@ import android.widget.TextView;
 import android.support.v7.widget.RecyclerView;
 
 import com.swolo.lpy.pysx.R;
+import com.swolo.lpy.pysx.main.modal.GbDepartmentEntity;
 import com.swolo.lpy.pysx.main.modal.NxDepartmentEntity;
 import com.swolo.lpy.pysx.main.modal.NxDistributerGoodsShelfGoodsEntity;
 import com.swolo.lpy.pysx.main.modal.NxDepartmentOrdersEntity;
@@ -24,7 +25,9 @@ public class StockOutGoodsAdapter extends RecyclerView.Adapter<StockOutGoodsAdap
     public interface OnOrderConfirmListener {
         void onOrderConfirm(List<NxDepartmentOrdersEntity> orderList);
     }
+
     private OnOrderConfirmListener orderConfirmListener;
+
     public void setOnOrderConfirmListener(OnOrderConfirmListener listener) {
         this.orderConfirmListener = listener;
     }
@@ -122,37 +125,52 @@ public class StockOutGoodsAdapter extends RecyclerView.Adapter<StockOutGoodsAdap
         TextView departmentName = orderView.findViewById(R.id.tv_department_name);
         TextView orderQuantity = orderView.findViewById(R.id.tv_order_quantity);
         TextView remark = orderView.findViewById(R.id.tv_remark);
-        
-        // 设置部门名称
-        if (order != null && order.getNxDepartmentEntity() != null) {
-            NxDepartmentEntity department = order.getNxDepartmentEntity();
-            if (department.getFatherDepartmentEntity() != null) {
-                departmentName.setText(String.format("(%s)%s.%s",
-                        department.getFatherDepartmentEntity().getNxDepartmentAttrName(),
+
+ // 设置部门名称
+ if (order != null) {
+    if (order.getNxDepartmentEntity() != null) {
+        NxDepartmentEntity department = order.getNxDepartmentEntity();
+        if (department.getFatherDepartmentEntity() != null) {
+            departmentName.setText(String.format("(%s)%s.%s",
+                    department.getFatherDepartmentEntity().getNxDepartmentAttrName(),
                     department.getFatherDepartmentEntity().getNxDepartmentName(),
                     department.getNxDepartmentName()));
-            } else {
-                departmentName.setText(department.getNxDepartmentName());
-                departmentName.setText(String.format("(%s)%s",
-                        department.getNxDepartmentAttrName(),
-                        department.getNxDepartmentName()));
-            }
         } else {
-            departmentName.setText("");
+            departmentName.setText(String.format("(%s)%s",
+                    department.getNxDepartmentAttrName(),
+                    department.getNxDepartmentName()));
         }
+    } else if (order.getGbDepartmentEntity() != null) {
+        GbDepartmentEntity department = order.getGbDepartmentEntity();
+        if (department.getFatherGbDepartmentEntity() != null && 
+            department.getFatherGbDepartmentEntity().getGbDepartmentSubAmount() > 1) {
+                departmentName.setText(String.format("(%s)%s.%s",
+                    department.getFatherGbDepartmentEntity().getGbDepartmentAttrName(),
+                    department.getFatherGbDepartmentEntity().getGbDepartmentName(),
+                    department.getGbDepartmentName()));
+        } else {
+            departmentName.setText(String.format("(%s)%s",
+                    department.getGbDepartmentAttrName(),
+                    department.getGbDepartmentName()));
+        }
+    }
+} else {
+    departmentName.setText("");
+}
+
 
         // 设置订单数量和出库数量
-        String orderText = String.format("订货: %s%s", 
-            order.getNxDoQuantity(), 
-            order.getNxDoStandard());
-        
+        String orderText = String.format("订货: %s%s",
+                order.getNxDoQuantity(),
+                order.getNxDoStandard());
+
         // 添加出库数量显示
         if (order.getNxDoWeight() != null && !order.getNxDoWeight().isEmpty()) {
-            orderText += String.format("  出库: %s%s", 
-                order.getNxDoWeight(),
-                goods.getNxDistributerGoodsEntity().getNxDgGoodsStandardname());
+            orderText += String.format("  出库: %s%s",
+                    order.getNxDoWeight(),
+                    goods.getNxDistributerGoodsEntity().getNxDgGoodsStandardname());
         }
-        
+
         orderQuantity.setText(orderText);
 
         // 设置备注
