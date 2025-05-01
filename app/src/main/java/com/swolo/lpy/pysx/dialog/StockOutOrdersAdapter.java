@@ -13,6 +13,7 @@ import android.widget.EditText;
 import com.swolo.lpy.pysx.R;
 import com.swolo.lpy.pysx.main.modal.NxDepartmentOrdersEntity;
 import com.swolo.lpy.pysx.main.modal.NxDistributerGoodsShelfGoodsEntity;
+import com.swolo.lpy.pysx.main.modal.NxDepartmentEntity;
 
 import java.util.List;
 
@@ -36,10 +37,20 @@ public class StockOutOrdersAdapter extends RecyclerView.Adapter<StockOutOrdersAd
         NxDepartmentOrdersEntity order = ordersList.get(position);
         
         // 设置部门名称
-        if (order.getNxDepartmentEntity() != null) {
-            holder.departmentName.setText(order.getNxDepartmentEntity().getNxDepartmentAttrName());
-        } else if (order.getGbDepartmentEntity() != null) {
-            holder.departmentName.setText(order.getGbDepartmentEntity().getGbDepartmentAttrName());
+        if (order != null && order.getNxDepartmentEntity() != null) {
+            NxDepartmentEntity department = order.getNxDepartmentEntity();
+            if (department.getFatherDepartmentEntity() != null) {
+                holder.departmentName.setText(String.format("(%s)%s.%s",
+                        department.getFatherDepartmentEntity().getNxDepartmentAttrName(),
+                        department.getFatherDepartmentEntity().getNxDepartmentName(),
+                        department.getNxDepartmentName()));
+            } else {
+                holder.departmentName.setText(String.format("(%s)%s",
+                        department.getNxDepartmentAttrName(),
+                        department.getNxDepartmentName()));
+            }
+        } else {
+            holder.departmentName.setText("");
         }
 
         // 设置订单数量

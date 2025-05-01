@@ -53,12 +53,17 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            if (BluetoothDevice.ACTION_FOUND.equals(action)) {
+            Log.d(TAG, "收到蓝牙广播: " + action);
+            
+            if (BluetoothAdapter.ACTION_DISCOVERY_STARTED.equals(action)) {
+                Log.d(TAG, "蓝牙搜索开始");
+                mIsSearching = true;
+                btnSearch.setText("停止搜索");
+                newDevices.clear();
+                adapter.notifyDataSetChanged();
+            } else if (BluetoothDevice.ACTION_FOUND.equals(action)) {
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 if (device == null) return;
-                
-                BluetoothParameter parameter = new BluetoothParameter();
-                int rssi = intent.getExtras().getShort(BluetoothDevice.EXTRA_RSSI);
                 
                 // 检查权限
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -69,25 +74,44 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
                 }
                 
                 String deviceName = device.getName();
-                parameter.setBluetoothName(deviceName != null ? deviceName : "未知设备");
-                parameter.setBluetoothMac(device.getAddress());
-                parameter.setBluetoothStrength(String.valueOf(rssi));
-
+                String deviceAddress = device.getAddress();
+                int rssi = intent.getExtras().getShort(BluetoothDevice.EXTRA_RSSI);
+                
+                Log.d(TAG, "发现设备: " + deviceName + " (" + deviceAddress + "), RSSI: " + rssi + 
+                          ", BondState: " + device.getBondState());
+                
+                // 检查设备是否未配对
                 if (device.getBondState() != BluetoothDevice.BOND_BONDED) {
+                    BluetoothParameter parameter = new BluetoothParameter();
+                    parameter.setBluetoothName(deviceName != null ? deviceName : "未知设备");
+                    parameter.setBluetoothMac(deviceAddress);
+                    parameter.setBluetoothStrength(String.valueOf(rssi));
+                    
+                    // 检查是否已存在
+                    boolean exists = false;
                     for (BluetoothParameter p : newDevices) {
-                        if (p.getBluetoothMac().equals(parameter.getBluetoothMac())) {
-                            return;
+                        if (p.getBluetoothMac().equals(deviceAddress)) {
+                            exists = true;
+                            break;
                         }
                     }
-                    newDevices.add(parameter);
-                    Collections.sort(newDevices, new Signal());
-                    adapter.notifyDataSetChanged();
+                    
+                    if (!exists) {
+                        Log.d(TAG, "添加新设备到列表: " + deviceName + " (" + deviceAddress + ")");
+                        newDevices.add(parameter);
+                        Collections.sort(newDevices, new Signal());
+                        adapter.notifyDataSetChanged();
+                    }
                 }
             } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
+                Log.d(TAG, "蓝牙搜索完成");
                 mIsSearching = false;
                 btnSearch.setText("搜索设备");
-                btnSearch.setVisibility(View.VISIBLE);
-                Toast.makeText(BluetoothDeviceActivity.this, "搜索完成", Toast.LENGTH_SHORT).show();
+                if (newDevices.isEmpty()) {
+                    Toast.makeText(BluetoothDeviceActivity.this, "未发现新设备", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(BluetoothDeviceActivity.this, "搜索完成，发现 " + newDevices.size() + " 个新设备", Toast.LENGTH_SHORT).show();
+                }
             }
         }
     };
@@ -189,6 +213,7 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
         IntentFilter filter = new IntentFilter();
         filter.addAction(BluetoothDevice.ACTION_FOUND);
         filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+        filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED);  // 添加搜索开始的广播
         registerReceiver(mFindBlueToothReceiver, filter);
     }
 
@@ -196,7 +221,9 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             String[] permissions = {
                 Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.BLUETOOTH_SCAN
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.ACCESS_FINE_LOCATION,  // 添加位置权限
+                Manifest.permission.ACCESS_COARSE_LOCATION // 添加位置权限
             };
             
             List<String> permissionsToRequest = new ArrayList<>();
@@ -207,6 +234,7 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
             }
             
             if (!permissionsToRequest.isEmpty()) {
+                Log.d(TAG, "请求权限: " + permissionsToRequest);
                 ActivityCompat.requestPermissions(this, 
                     permissionsToRequest.toArray(new String[0]), 
                     REQUEST_BLUETOOTH_PERMISSIONS);
@@ -215,8 +243,27 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
                 checkBluetoothEnabled();
             }
         } else {
-            // Android 11 及以下版本不需要这些权限
-            checkBluetoothEnabled();
+            // Android 11 及以下版本需要位置权限
+            String[] permissions = {
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            };
+            
+            List<String> permissionsToRequest = new ArrayList<>();
+            for (String permission : permissions) {
+                if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                    permissionsToRequest.add(permission);
+                }
+            }
+            
+            if (!permissionsToRequest.isEmpty()) {
+                Log.d(TAG, "请求位置权限: " + permissionsToRequest);
+                ActivityCompat.requestPermissions(this, 
+                    permissionsToRequest.toArray(new String[0]), 
+                    REQUEST_BLUETOOTH_PERMISSIONS);
+            } else {
+                checkBluetoothEnabled();
+            }
         }
     }
 
@@ -311,7 +358,10 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
             }
         }
         
-        mBluetoothAdapter.cancelDiscovery();
+        if (mBluetoothAdapter.isDiscovering()) {
+            Log.d(TAG, "取消蓝牙搜索");
+            mBluetoothAdapter.cancelDiscovery();
+        }
     }
 
     private void startSearch() {
@@ -320,6 +370,15 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
             return;
         }
         
+        // 检查蓝牙是否开启
+        if (!mBluetoothAdapter.isEnabled()) {
+            Toast.makeText(this, "请先开启蓝牙", Toast.LENGTH_SHORT).show();
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+            return;
+        }
+        
+        // 检查权限
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) 
                     != PackageManager.PERMISSION_GRANTED) {
@@ -328,12 +387,23 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
             }
         }
         
-        cancelDiscovery();
+        // 检查位置权限（Android 12以下需要）
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) 
+                    != PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "需要位置权限才能搜索蓝牙设备", Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
         
-        newDevices.clear();
-        adapter.notifyDataSetChanged();
-        mIsSearching = true;
-        btnSearch.setText("停止搜索");
+        // 如果正在搜索，先停止
+        if (mIsSearching) {
+            stopSearch();
+            return;
+        }
+        
+        Log.d(TAG, "开始搜索蓝牙设备");
+        cancelDiscovery();
         mBluetoothAdapter.startDiscovery();
     }
 
@@ -349,6 +419,7 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
             }
         }
         
+        Log.d(TAG, "停止搜索蓝牙设备");
         mIsSearching = false;
         btnSearch.setText("搜索设备");
         cancelDiscovery();

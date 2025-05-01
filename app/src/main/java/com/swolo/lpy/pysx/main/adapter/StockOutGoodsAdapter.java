@@ -8,6 +8,7 @@ import android.widget.TextView;
 import android.support.v7.widget.RecyclerView;
 
 import com.swolo.lpy.pysx.R;
+import com.swolo.lpy.pysx.main.modal.NxDepartmentEntity;
 import com.swolo.lpy.pysx.main.modal.NxDistributerGoodsShelfGoodsEntity;
 import com.swolo.lpy.pysx.main.modal.NxDepartmentOrdersEntity;
 import com.swolo.lpy.pysx.dialog.StockOutGoodsDialog;
@@ -123,10 +124,21 @@ public class StockOutGoodsAdapter extends RecyclerView.Adapter<StockOutGoodsAdap
         TextView remark = orderView.findViewById(R.id.tv_remark);
         
         // 设置部门名称
-        if (order.getNxDepartmentEntity() != null) {
-            departmentName.setText(order.getNxDepartmentEntity().getNxDepartmentAttrName());
-        } else if (order.getGbDepartmentEntity() != null) {
-            departmentName.setText(order.getGbDepartmentEntity().getGbDepartmentAttrName());
+        if (order != null && order.getNxDepartmentEntity() != null) {
+            NxDepartmentEntity department = order.getNxDepartmentEntity();
+            if (department.getFatherDepartmentEntity() != null) {
+                departmentName.setText(String.format("(%s)%s.%s",
+                        department.getFatherDepartmentEntity().getNxDepartmentAttrName(),
+                    department.getFatherDepartmentEntity().getNxDepartmentName(),
+                    department.getNxDepartmentName()));
+            } else {
+                departmentName.setText(department.getNxDepartmentName());
+                departmentName.setText(String.format("(%s)%s",
+                        department.getNxDepartmentAttrName(),
+                        department.getNxDepartmentName()));
+            }
+        } else {
+            departmentName.setText("");
         }
 
         // 设置订单数量和出库数量

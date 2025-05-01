@@ -5,7 +5,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.Toast;
+import android.content.Intent;
 
 import com.swolo.lpy.pysx.R;
 import com.swolo.lpy.pysx.api.GoodsApi;
@@ -42,10 +44,14 @@ public class LoginActivity extends BaseActivity implements MainContract.LoginVie
         SharedPreferences sp = getSharedPreferences("user_cache", MODE_PRIVATE);
         String userInfoJson = sp.getString("userInfo", null);
         String disInfoJson = sp.getString("disInfo", null);
+        SharedPreferences userInfoPrefs = getSharedPreferences("user_info", MODE_PRIVATE);
+        int distributerId = userInfoPrefs.getInt("distributer_id", -1);
 
-        if (userInfoJson != null && disInfoJson != null) {
+        if (userInfoJson != null && disInfoJson != null && distributerId != -1) {
             Log.d("LoginActivity", "检测到本地有缓存用户信息，自动跳转到出库页面");
-            startActivity(new android.content.Intent(this, StockOutActivity.class));
+            Intent intent = new Intent(this, StockOutActivity.class);
+            intent.putExtra("distributer_id", distributerId);
+            startActivity(intent);
             finish();
             return;
         }
@@ -53,6 +59,14 @@ public class LoginActivity extends BaseActivity implements MainContract.LoginVie
         Log.d("LoginActivity", "onCreate: LoginActivity created");
 
         loginPresenter = new LoginPresenterImpl(this);
+        ImageButton btnBack = findViewById(R.id.btn_back);
+        if (btnBack != null) {
+            btnBack.setVisibility(View.GONE);
+        }
+        ImageButton btnSetting = findViewById(R.id.btn_settings);
+        if (btnSetting != null) {
+            btnSetting.setVisibility(View.GONE);
+        }
 
         initView();
         initData();
@@ -150,21 +164,47 @@ public class LoginActivity extends BaseActivity implements MainContract.LoginVie
                 disInfo = gson.fromJson(disInfoJson, NxDistributerEntity.class);
                 Log.d("LoginActivity", "userInfo实体: " + userInfoJson);
                 Log.d("LoginActivity", "disInfo实体: " + disInfoJson);
+
+                // 清除所有缓存
+                SharedPreferences userCache = getSharedPreferences("user_cache", MODE_PRIVATE);
+                SharedPreferences userInfoPrefs = getSharedPreferences("user_info", MODE_PRIVATE);
+                SharedPreferences deptCache = getSharedPreferences("department_cache", MODE_PRIVATE);
+                SharedPreferences printerCache = getSharedPreferences("printer_cache", MODE_PRIVATE);
+
+                userCache.edit().clear().apply();
+                userInfoPrefs.edit().clear().apply();
+                deptCache.edit().clear().apply();
+                printerCache.edit().clear().apply();
+                Log.d("LoginActivity", "已清除所有缓存");
+
+                // 保存分销商ID到SharedPreferences
+                if (userInfo != null && userInfo.getNxDiuDistributerId() != null) {
+                    userInfoPrefs.edit()
+                        .putInt("distributer_id", userInfo.getNxDiuDistributerId())
+                        .apply();
+                    Log.d("LoginActivity", "保存分销商ID: " + userInfo.getNxDiuDistributerId());
+                } else {
+                    Log.e("LoginActivity", "用户信息中未找到分销商ID");
+                    Toast.makeText(this, "登录失败：未找到分销商信息", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                // 2. 缓存到本地
+                userCache.edit()
+                    .putString("userInfo", userInfoJson)
+                    .putString("disInfo", disInfoJson)
+                    .apply();
+                Log.d("LoginActivity", "userInfo和disInfo已缓存到本地");
+
+                // 3. 跳转到出库页面
+                Intent intent = new Intent(this, StockOutActivity.class);
+                intent.putExtra("distributer_id", userInfo.getNxDiuDistributerId());
+                startActivity(intent);
+                finish();
             } catch (Exception e) {
                 Log.e("LoginActivity", "解析实体失败: " + e.getMessage());
+                Toast.makeText(this, "登录失败：" + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
-
-            // 2. 缓存到本地
-            SharedPreferences sp = getSharedPreferences("user_cache", MODE_PRIVATE);
-            SharedPreferences.Editor editor = sp.edit();
-            editor.putString("userInfo", gson.toJson(userInfo));
-            editor.putString("disInfo", gson.toJson(disInfo));
-            editor.apply();
-            Log.d("LoginActivity", "userInfo和disInfo已缓存到本地");
-
-            // 3. 跳转到出库页面
-            startActivity(new android.content.Intent(this, StockOutActivity.class));
-            finish();
         }
     }
 
