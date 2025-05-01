@@ -187,9 +187,7 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
                 });
             }
 
-
-
-             btnRight = findViewById(R.id.btn_right);
+            btnRight = findViewById(R.id.btn_right);
             if (btnRight != null) {
                 btnRight.setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -213,7 +211,6 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
                 tvPrinterInfo.setTextColor(getResources().getColor(android.R.color.darker_gray));
                 updatePrinterInfo(); // 立即更新打印机信息
             }
-
 
             bindAction();
             Log.d(TAG, "bindAction执行完成");
