@@ -8,10 +8,13 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
@@ -28,6 +31,8 @@ import android.widget.Toast;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.app.ProgressDialog;
+import android.Manifest;
+import android.content.pm.PackageManager;
 
 import com.swolo.lpy.pysx.R;
 import com.swolo.lpy.pysx.main.adapter.StockOutAdapter;
@@ -105,6 +110,8 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
 
     private ProgressDialog progressDialog;
 
+    private static final int REQUEST_BLUETOOTH_CONNECT_PERMISSION = 1002;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         try {
@@ -162,6 +169,15 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
             mPermissionIntent = PendingIntent.getBroadcast(this, 0,
                 new Intent(Constant.ACTION_USB_PERMISSION), PendingIntent.FLAG_IMMUTABLE);
             Log.d(TAG, "mPermissionIntent初始化完成");
+
+            // 注册广播接收器
+            IntentFilter filter = new IntentFilter(Constant.ACTION_USB_PERMISSION);
+            filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
+            filter.addAction(DeviceConnFactoryManager.ACTION_QUERY_PRINTER_STATE);
+            filter.addAction(DeviceConnFactoryManager.ACTION_CONN_STATE);
+            filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
+            registerReceiver(receiver, filter);
+            Log.d(TAG, "广播接收器注册完成");
 
             // 初始化所有视图
             initView();
@@ -222,8 +238,12 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
             setView();
             Log.d(TAG, "setView执行完成");
 
-            // 自动搜索并连接USB打印机
-            autoConnectPrinter();
+            // 延迟执行自动连接打印机，确保所有初始化完成
+            printerHandler.postDelayed(() -> {
+                Log.d(TAG, "开始自动连接打印机");
+                autoConnectPrinter();
+            }, 1000);
+
             Log.d(TAG, "onCreate执行完成");
         } catch (Exception e) {
             Log.e(TAG, "onCreate发生异常", e);
@@ -711,12 +731,12 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
                 NxDepartmentEntity department = order.getNxDepartmentEntity();
                 if (department.getFatherDepartmentEntity() != null) {
                     return String.format("(%s)%s.%s",
-                            department.getFatherDepartmentEntity().getNxDepartmentAttrName(),
+                            department.getFatherDepartmentEntity().getNxDepartmentPickName(),
                             department.getFatherDepartmentEntity().getNxDepartmentName(),
                             department.getNxDepartmentName());
                 } else {
                     return String.format("(%s)%s",
-                            department.getNxDepartmentAttrName(),
+                            department.getNxDepartmentPickName(),
                             department.getNxDepartmentName());
                 }
 
@@ -944,13 +964,16 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
                 
                 // 获取打印机类型
                 String printerType = "未知";
-                switch (deviceManager.getCurrentPrinterCommand()) {
-                    case ESC:
-                        printerType = "ESC指令";
-                        break;
-                    case TSC:
-                        printerType = "TSC指令";
-                        break;
+                PrinterCommand command = deviceManager.getCurrentPrinterCommand();
+                if (command != null) {
+                    switch (command) {
+                        case ESC:
+                            printerType = "ESC指令";
+                            break;
+                        case TSC:
+                            printerType = "TSC指令";
+                            break;
+                    }
                 }
                 info.append("打印机类型: ").append(printerType);
             } else {
@@ -1236,29 +1259,130 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
             String printerAddress = sp.getString("printer_address", null);
 
             if (printerType == null || printerAddress == null) {
-                Log.d(TAG, "没有保存的打印机信息");
-                updatePrinterInfo();
+                Log.d(TAG, "没有保存的打印机信息，开始搜索可用打印机");
+                searchAndConnectPrinter();
                 return;
             }
 
-            // 根据打印机类型选择连接方式
+            // 优先尝试缓存的连接方式
             if ("usb".equals(printerType)) {
-                autoConnectUsbPrinter();
+                Log.d(TAG, "尝试使用缓存的USB打印机连接");
+                boolean connected = tryConnectCachedUsbPrinter();
+                if (!connected) {
+                    Log.d(TAG, "缓存的USB打印机连接失败，开始搜索其他打印机");
+                    searchAndConnectPrinter();
+                }
             } else if ("bluetooth".equals(printerType)) {
+                Log.d(TAG, "尝试使用缓存的蓝牙打印机连接");
                 autoConnectBluetoothPrinter(printerAddress);
             } else {
                 Log.e(TAG, "不支持的打印机类型: " + printerType);
-                showToast("不支持的打印机类型");
+                searchAndConnectPrinter();
             }
         } catch (Exception e) {
             Log.e(TAG, "自动连接打印机失败", e);
             showToast("自动连接打印机失败: " + e.getMessage());
+            searchAndConnectPrinter();
+        }
+    }
+
+    private boolean tryConnectCachedUsbPrinter() {
+        Log.d(TAG, "尝试连接缓存的USB打印机");
+        try {
+            UsbManager usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+            if (usbManager == null) {
+                Log.e(TAG, "无法获取USB服务");
+                return false;
+            }
+
+            HashMap<String, UsbDevice> deviceList = usbManager.getDeviceList();
+            if (deviceList == null || deviceList.isEmpty()) {
+                Log.d(TAG, "未检测到USB设备");
+                return false;
+            }
+
+            // 查找匹配的USB设备
+            for (UsbDevice device : deviceList.values()) {
+                if (device.getVendorId() == 26728 && device.getProductId() == 1280) {
+                    Log.d(TAG, "找到匹配的USB打印机");
+                    if (usbManager.hasPermission(device)) {
+                        Log.d(TAG, "已有USB权限，开始连接");
+                        usbConn(device);
+                        // 检查连接状态
+                        if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id] != null && 
+                            DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].getConnState()) {
+                            Log.d(TAG, "缓存的USB打印机连接成功");
+                            return true;
+                        }
+                    } else {
+                        Log.d(TAG, "请求USB权限");
+                        try {
+                            usbManager.requestPermission(device, mPermissionIntent);
+                            Log.d(TAG, "USB权限请求已发送");
+                        } catch (Exception e) {
+                            Log.e(TAG, "请求USB权限失败", e);
+                            showToast("请求USB权限失败: " + e.getMessage());
+                        }
+                    }
+                    break;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            Log.e(TAG, "连接缓存的USB打印机失败", e);
+            return false;
+        }
+    }
+
+    private void searchAndConnectPrinter() {
+        Log.d(TAG, "开始搜索可用打印机");
+        try {
+            // 首先尝试USB打印机
+            UsbManager usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+            if (usbManager != null) {
+                HashMap<String, UsbDevice> deviceList = usbManager.getDeviceList();
+                if (deviceList != null && !deviceList.isEmpty()) {
+                    for (UsbDevice device : deviceList.values()) {
+                        if (device.getVendorId() == 26728 && device.getProductId() == 1280) {
+                            Log.d(TAG, "找到USB打印机，尝试连接");
+                            if (usbManager.hasPermission(device)) {
+                                usbConn(device);
+                                return;
+                            } else {
+                                usbManager.requestPermission(device, mPermissionIntent);
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 如果没有找到USB打印机，更新打印机状态
+            Log.d(TAG, "未找到USB打印机");
+            updatePrinterStatus(false);
+            showToast("未找到可用打印机");
+        } catch (Exception e) {
+            Log.e(TAG, "搜索打印机失败", e);
+            showToast("搜索打印机失败: " + e.getMessage());
         }
     }
 
     private void autoConnectBluetoothPrinter(String address) {
         Log.d(TAG, "开始连接蓝牙打印机: " + address);
         try {
+            // 检查蓝牙权限
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) 
+                        != PackageManager.PERMISSION_GRANTED) {
+                    Log.e(TAG, "缺少蓝牙连接权限");
+                    showToast("缺少蓝牙连接权限");
+                    ActivityCompat.requestPermissions(this, 
+                        new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 
+                        REQUEST_BLUETOOTH_CONNECT_PERMISSION);
+                    return;
+                }
+            }
+
             // 检查蓝牙是否开启
             if (bluetoothAdapter == null) {
                 Log.e(TAG, "设备不支持蓝牙");
@@ -1273,10 +1397,32 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
             }
 
             // 获取蓝牙设备
-            BluetoothDevice device = bluetoothAdapter.getRemoteDevice(address);
+            BluetoothDevice device;
+            try {
+                device = bluetoothAdapter.getRemoteDevice(address);
+            } catch (IllegalArgumentException e) {
+                Log.e(TAG, "无效的蓝牙地址: " + address);
+                showToast("无效的蓝牙地址");
+                return;
+            }
+
             if (device == null) {
                 Log.e(TAG, "未找到蓝牙打印机设备");
                 showToast("未找到蓝牙打印机设备");
+                return;
+            }
+
+            // 检查设备是否已配对
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) 
+                        != PackageManager.PERMISSION_GRANTED) {
+                    return;
+                }
+            }
+            
+            if (device.getBondState() != BluetoothDevice.BOND_BONDED) {
+                Log.e(TAG, "设备未配对");
+                showToast("请先配对设备");
                 return;
             }
 
@@ -1295,67 +1441,31 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
 
             // 打开端口
             DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].openPort();
-
+            
             // 检查连接状态
-            if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].getConnState()) {
+            boolean connected = DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].getConnState();
+            if (connected) {
                 Log.d(TAG, "蓝牙打印机连接成功");
                 isPrinterConnected = true;
                 showToast("蓝牙打印机连接成功");
+                
+                // 保存打印机信息
+                SharedPreferences sp = getSharedPreferences("printer_cache", MODE_PRIVATE);
+                sp.edit()
+                    .putString("printer_type", "bluetooth")
+                    .putString("printer_address", address)
+                    .apply();
             } else {
                 Log.e(TAG, "蓝牙打印机连接失败");
                 showToast("蓝牙打印机连接失败");
+                isPrinterConnected = false;
             }
         } catch (Exception e) {
             Log.e(TAG, "连接蓝牙打印机失败", e);
             showToast("连接蓝牙打印机失败: " + e.getMessage());
+            isPrinterConnected = false;
         } finally {
             updatePrinterInfo();
-        }
-    }
-
-    private void autoConnectUsbPrinter() {
-        Log.d(TAG, "开始自动搜索USB打印机");
-        try {
-            UsbManager usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
-            if (usbManager == null) {
-                Log.e(TAG, "无法获取USB服务");
-                return;
-            }
-
-            HashMap<String, UsbDevice> deviceList = usbManager.getDeviceList();
-            if (deviceList == null || deviceList.isEmpty()) {
-                Log.d(TAG, "未检测到USB设备");
-                updatePrinterInfo();
-                return;
-            }
-
-            boolean foundPrinter = false;
-            for (UsbDevice device : deviceList.values()) {
-                Log.d(TAG, "检查USB设备: " + device.getDeviceName() + 
-                      ", VendorID: " + device.getVendorId() + 
-                      ", ProductID: " + device.getProductId());
-                  
-                if (device.getVendorId() == 26728 && device.getProductId() == 1280) {
-                    Log.d(TAG, "找到USB打印机，检查权限");
-                    if (usbManager.hasPermission(device)) {
-                        Log.d(TAG, "已有USB权限，开始连接");
-                        foundPrinter = true;
-                        usbConn(device);
-                    } else {
-                        Log.d(TAG, "请求USB权限");
-                        usbManager.requestPermission(device, mPermissionIntent);
-                    }
-                    break;
-                }
-            }
-            
-            if (!foundPrinter) {
-                Log.d(TAG, "未找到USB打印机");
-                updatePrinterInfo();
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "自动连接USB打印机失败", e);
-            showToast("自动连接USB打印机失败: " + e.getMessage());
         }
     }
 
@@ -1418,6 +1528,26 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     public void hideLoading() {
         if (progressDialog != null && progressDialog.isShowing()) {
             progressDialog.dismiss();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_BLUETOOTH_CONNECT_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "蓝牙连接权限已授予");
+                // 重新尝试连接打印机
+                SharedPreferences sp = getSharedPreferences("printer_cache", MODE_PRIVATE);
+                String printerType = sp.getString("printer_type", null);
+                String printerAddress = sp.getString("printer_address", null);
+                if ("bluetooth".equals(printerType) && printerAddress != null) {
+                    autoConnectBluetoothPrinter(printerAddress);
+                }
+            } else {
+                Log.e(TAG, "蓝牙连接权限被拒绝");
+                showToast("需要蓝牙连接权限才能使用打印机");
+            }
         }
     }
 }

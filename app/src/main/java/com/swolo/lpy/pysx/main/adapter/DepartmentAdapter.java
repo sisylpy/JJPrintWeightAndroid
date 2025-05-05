@@ -77,7 +77,7 @@ public class DepartmentAdapter extends RecyclerView.Adapter<DepartmentAdapter.In
         if (department instanceof NxDepartmentEntity) {
             NxDepartmentEntity nxDep = (NxDepartmentEntity) department;
             holder.departmentName.setText(nxDep.getNxDepartmentName());
-            holder.departmentAttrName.setText(nxDep.getNxDepartmentAttrName());
+            holder.departmentAttrName.setText(nxDep.getNxDepartmentPickName());
             Boolean isSelected = nxDep.getSelected();
             Log.d(TAG, "内销部门: " + nxDep.getNxDepartmentName() + ", 选中状态: " + isSelected);
             holder.checkBox.setChecked(isSelected != null && isSelected);

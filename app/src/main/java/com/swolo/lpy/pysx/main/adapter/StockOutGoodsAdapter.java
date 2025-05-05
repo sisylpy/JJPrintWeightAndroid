@@ -132,12 +132,12 @@ public class StockOutGoodsAdapter extends RecyclerView.Adapter<StockOutGoodsAdap
         NxDepartmentEntity department = order.getNxDepartmentEntity();
         if (department.getFatherDepartmentEntity() != null) {
             departmentName.setText(String.format("(%s)%s.%s",
-                    department.getFatherDepartmentEntity().getNxDepartmentAttrName(),
+                    department.getFatherDepartmentEntity().getNxDepartmentPickName(),
                     department.getFatherDepartmentEntity().getNxDepartmentName(),
                     department.getNxDepartmentName()));
         } else {
             departmentName.setText(String.format("(%s)%s",
-                    department.getNxDepartmentAttrName(),
+                    department.getNxDepartmentPickName(),
                     department.getNxDepartmentName()));
         }
     } else if (order.getGbDepartmentEntity() != null) {

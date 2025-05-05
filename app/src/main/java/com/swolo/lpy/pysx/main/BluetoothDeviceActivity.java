@@ -15,9 +15,12 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 //import androidx.appcompat.app.AppCompatActivity;
@@ -32,6 +35,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.Vector;
+import java.lang.reflect.Method;
 
 public class BluetoothDeviceActivity extends AppCompatActivity {
     private static final String TAG = BluetoothDeviceActivity.class.getSimpleName();
@@ -116,6 +120,45 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
         }
     };
 
+    // 添加配对状态变化的广播接收器
+    private final BroadcastReceiver mPairingReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            Log.d(TAG, "收到配对广播: " + action);
+            
+            if (BluetoothDevice.ACTION_BOND_STATE_CHANGED.equals(action)) {
+                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                if (device == null) return;
+                
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    if (ActivityCompat.checkSelfPermission(BluetoothDeviceActivity.this, 
+                            Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                        return;
+                    }
+                }
+                
+                int bondState = device.getBondState();
+                Log.d(TAG, "设备配对状态变化: " + bondState);
+                
+                switch (bondState) {
+                    case BluetoothDevice.BOND_BONDED:
+                        Log.d(TAG, "设备配对成功");
+                        Toast.makeText(BluetoothDeviceActivity.this, "设备配对成功", Toast.LENGTH_SHORT).show();
+                        // 配对成功后自动连接并打印
+                        mSelectedMacAddress = device.getAddress();
+                        printTestReceipt();
+                        finish();
+                        break;
+                    case BluetoothDevice.BOND_NONE:
+                        Log.d(TAG, "设备配对失败或已取消配对");
+                        Toast.makeText(BluetoothDeviceActivity.this, "设备配对失败", Toast.LENGTH_SHORT).show();
+                        break;
+                }
+            }
+        }
+    };
+
     static class Signal implements Comparator<BluetoothParameter> {
         public int compare(BluetoothParameter p1, BluetoothParameter p2) {
             return p1.getBluetoothStrength().compareTo(p2.getBluetoothStrength());
@@ -126,9 +169,29 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_bluetooth);
+
+        // 设置ActionBar的返回按钮
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setDisplayShowHomeEnabled(true);
+            getSupportActionBar().setTitle("蓝牙设备");
+        }
+        
         initView();
         initBluetooth();
         initBroadcast();
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(android.view.MenuItem item) {
+        if (item.getItemId() == android.R.id.home) {
+            // 取消蓝牙搜索
+            cancelDiscovery();
+            // 返回上一页
+            finish();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     private void initView() {
@@ -146,12 +209,74 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
             }
             
             String mac = null;
+            BluetoothDevice selectedDevice = null;
+            
             if (position <= pairedDevices.size()) {
                 mac = pairedDevices.get(position - 1).getBluetoothMac();
                 Log.d(TAG, "选择了已配对设备，MAC: " + mac);
             } else {
                 mac = newDevices.get(position - pairedDevices.size() - 2).getBluetoothMac();
                 Log.d(TAG, "选择了新设备，MAC: " + mac);
+                
+                // 获取选中的设备
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) 
+                            != PackageManager.PERMISSION_GRANTED) {
+                        Log.e(TAG, "缺少蓝牙连接权限");
+                        Toast.makeText(this, "缺少蓝牙连接权限", Toast.LENGTH_SHORT).show();
+                        ActivityCompat.requestPermissions(this, 
+                            new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 
+                            REQUEST_BLUETOOTH_CONNECT_PERMISSION);
+                        return;
+                    }
+                }
+                
+                selectedDevice = mBluetoothAdapter.getRemoteDevice(mac);
+                if (selectedDevice == null) {
+                    Log.e(TAG, "无法获取设备信息");
+                    Toast.makeText(this, "无法获取设备信息", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                
+                // 检查设备是否已配对
+                if (selectedDevice.getBondState() != BluetoothDevice.BOND_BONDED) {
+                    Log.d(TAG, "设备未配对，开始配对");
+                    try {
+                        // 停止搜索
+                        cancelDiscovery();
+                        
+                        // 开始配对
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) 
+                                    != PackageManager.PERMISSION_GRANTED) {
+                                return;
+                            }
+                        }
+                        
+                        // 检查API版本
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                            selectedDevice.createBond();
+                        } else {
+                            // 对于API 19以下的版本，使用反射调用createBond方法
+                            try {
+                                Method method = selectedDevice.getClass().getMethod("createBond");
+                                method.invoke(selectedDevice);
+                            } catch (Exception e) {
+                                Log.e(TAG, "配对失败", e);
+                                Toast.makeText(this, "配对失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                        }
+                        
+                        // 显示配对中提示
+                        Toast.makeText(this, "正在配对设备，请稍候...", Toast.LENGTH_SHORT).show();
+                        return;
+                    } catch (Exception e) {
+                        Log.e(TAG, "配对失败", e);
+                        Toast.makeText(this, "配对失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                }
             }
             
             if (mBluetoothAdapter == null) {
@@ -213,8 +338,10 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
         IntentFilter filter = new IntentFilter();
         filter.addAction(BluetoothDevice.ACTION_FOUND);
         filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
-        filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED);  // 添加搜索开始的广播
+        filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
+        filter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);  // 添加配对状态变化监听
         registerReceiver(mFindBlueToothReceiver, filter);
+        registerReceiver(mPairingReceiver, filter);  // 注册配对状态接收器
     }
 
     private void checkAndRequestPermissions() {
@@ -442,7 +569,12 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         cancelDiscovery();
-        unregisterReceiver(mFindBlueToothReceiver);
+        try {
+            unregisterReceiver(mFindBlueToothReceiver);
+            unregisterReceiver(mPairingReceiver);
+        } catch (Exception e) {
+            Log.e(TAG, "注销广播接收器失败", e);
+        }
     }
 
     private void printTestReceipt() {

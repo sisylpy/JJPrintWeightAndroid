@@ -21,6 +21,16 @@ public class NxDepartmentEntity implements Serializable{
      *  订货部门名称
      */
     public String nxDepartmentName;
+    public String nxDepartmentPickName;
+
+    public String getNxDepartmentPickName() {
+        return nxDepartmentPickName;
+    }
+
+    public void setNxDepartmentPickName(String nxDepartmentPickName) {
+        this.nxDepartmentPickName = nxDepartmentPickName;
+    }
+
     /**
      *  订货部门上级id
      */

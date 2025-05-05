@@ -40,14 +40,16 @@ public class SettingsActivity extends BaseActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
+
         // 设置ActionBar的返回按钮
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             getSupportActionBar().setDisplayShowHomeEnabled(true);
+//             getSupportActionBar().setHomeAsUpIndicator(android.R.drawable.ic_menu_revert);  // 使用与蓝牙页面相同的返回图标
         }
-        
+
         initView();
+
         initData();
         setView();
         bindAction();
