@@ -75,8 +75,10 @@ public class DepartmentListActivity extends AppCompatActivity implements MainCon
             throw new RuntimeException("找不到部门RecyclerView");
         }
         rvDepartments.setLayoutManager(new LinearLayoutManager(this));
+        // 添加分割线
+        rvDepartments.addItemDecoration(new android.support.v7.widget.DividerItemDecoration(this, android.support.v7.widget.DividerItemDecoration.VERTICAL));
         rvDepartments.setVisibility(View.VISIBLE);
-        
+
         // 初始化返回按钮
         ImageButton btnBack = findViewById(R.id.btn_back);
         if (btnBack != null) {

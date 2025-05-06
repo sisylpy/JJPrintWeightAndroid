@@ -101,7 +101,7 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     private TextView tvNoData;
     private TextView tvPrinterInfo;
     private RecyclerView rvOrders;
-    private SwipeRefreshLayout swipeRefreshLayout;
+    private LinearLayout contentContainer; // 改为 LinearLayout
     private StockOutAdapter adapter;
 
     private BluetoothAdapter bluetoothAdapter;
@@ -290,15 +290,7 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
             btnClearNxDep = stockOutLayout.findViewById(R.id.btn_clear_nx_dep);
             btnClearGbDep = stockOutLayout.findViewById(R.id.btn_clear_gb_dep);
             tvNoData = stockOutLayout.findViewById(R.id.tv_no_data);
-            swipeRefreshLayout = stockOutLayout.findViewById(R.id.swipe_refresh_layout);
-
-            // 设置下拉刷新
-            swipeRefreshLayout.setOnRefreshListener(() -> {
-                if (stockOutPresenter != null) {
-                    stockOutPresenter.getStockGoods(disId, goodsType);
-                }
-            });
-
+            contentContainer = stockOutLayout.findViewById(R.id.swipe_refresh_layout);
 
             Log.d(TAG, "视图初始化完成");
         } catch (Exception e) {
@@ -1507,9 +1499,7 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
 
     @Override
     public void stopLoading() {
-        if (swipeRefreshLayout != null) {
-            swipeRefreshLayout.setRefreshing(false);
-        }
+        // 不再需要处理下拉刷新状态
     }
 
     @Override

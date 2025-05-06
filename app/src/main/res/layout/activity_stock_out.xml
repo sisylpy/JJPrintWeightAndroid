@@ -104,7 +104,7 @@
     </LinearLayout>
 
     <!-- 主要内容区域 -->
-    <android.support.v4.widget.SwipeRefreshLayout
+    <LinearLayout
         android:id="@+id/swipe_refresh_layout"
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -134,7 +134,7 @@
 
         </LinearLayout>
 
-    </android.support.v4.widget.SwipeRefreshLayout>
+    </LinearLayout>
 
     <!-- 无数据提示 -->
     <TextView

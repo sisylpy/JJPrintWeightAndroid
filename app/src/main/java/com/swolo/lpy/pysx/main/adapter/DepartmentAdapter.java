@@ -18,7 +18,7 @@ import java.util.List;
 
 public class DepartmentAdapter extends RecyclerView.Adapter<DepartmentAdapter.InnerHolder> {
     private static final String TAG = "DepartmentAdapter";
-    
+
     private List<Object> departmentList = new ArrayList<>();
     private OnItemClickListener mListener;
 
@@ -37,7 +37,7 @@ public class DepartmentAdapter extends RecyclerView.Adapter<DepartmentAdapter.In
 
     public void setData(List<?> departments) {
         Log.d(TAG, "设置数据: 原始数据大小=" + (departments != null ? departments.size() : 0));
-        
+
         // 验证数据类型
         if (departments != null && !departments.isEmpty()) {
             for (Object department : departments) {
@@ -47,8 +47,31 @@ public class DepartmentAdapter extends RecyclerView.Adapter<DepartmentAdapter.In
                 }
             }
         }
-        
-        this.departmentList = departments != null ? new ArrayList<>(departments) : new ArrayList<>();
+
+        this.departmentList = new ArrayList<>();
+
+        // 添加标题和部门
+        boolean hasNxDepartment = false;
+        boolean hasGbDepartment = false;
+
+        if (departments != null) {
+            for (Object department : departments) {
+                if (department instanceof NxDepartmentEntity) {
+                    if (!hasNxDepartment) {
+                        this.departmentList.add("配送客户");
+                        hasNxDepartment = true;
+                    }
+                    this.departmentList.add(department);
+                } else if (department instanceof GbDepartmentEntity) {
+                    if (!hasGbDepartment) {
+                        this.departmentList.add("平台客户");
+                        hasGbDepartment = true;
+                    }
+                    this.departmentList.add(department);
+                }
+            }
+        }
+
         Log.d(TAG, "设置数据完成: 当前数据大小=" + departmentList.size());
         notifyDataSetChanged();
     }
@@ -73,27 +96,41 @@ public class DepartmentAdapter extends RecyclerView.Adapter<DepartmentAdapter.In
             return;
         }
 
-        Object department = departmentList.get(position);
-        if (department instanceof NxDepartmentEntity) {
-            NxDepartmentEntity nxDep = (NxDepartmentEntity) department;
-            holder.departmentName.setText(nxDep.getNxDepartmentName());
-            holder.departmentAttrName.setText(nxDep.getNxDepartmentPickName());
+        Object item = departmentList.get(position);
+        if (item instanceof String) {
+            // 显示标题
+            holder.departmentName.setText((String) item);
+            holder.checkBox.setVisibility(View.GONE);
+            holder.itemView.setClickable(false);
+            holder.itemView.setBackgroundResource(android.R.color.darker_gray);
+            return;
+        }
+
+        // 显示部门信息
+        holder.checkBox.setVisibility(View.VISIBLE);
+        holder.itemView.setClickable(true);
+        holder.itemView.setBackgroundResource(android.R.color.white);
+
+        if (item instanceof NxDepartmentEntity) {
+            NxDepartmentEntity nxDep = (NxDepartmentEntity) item;
+            String displayText = "(" + nxDep.getNxDepartmentPickName() + ")" + nxDep.getNxDepartmentName();
+            holder.departmentName.setText(displayText);
             Boolean isSelected = nxDep.getSelected();
             Log.d(TAG, "内销部门: " + nxDep.getNxDepartmentName() + ", 选中状态: " + isSelected);
-            holder.checkBox.setChecked(isSelected != null && isSelected);
-        } else if (department instanceof GbDepartmentEntity) {
-            GbDepartmentEntity gbDep = (GbDepartmentEntity) department;
-            holder.departmentName.setText(gbDep.getGbDepartmentName());
-            holder.departmentAttrName.setText(gbDep.getGbDepartmentAttrName());
+            holder.checkBox.setChecked(isSelected != null ? isSelected : false);
+        } else if (item instanceof GbDepartmentEntity) {
+            GbDepartmentEntity gbDep = (GbDepartmentEntity) item;
+            String displayText = "(" + gbDep.getGbDepartmentAttrName() + ")" + gbDep.getGbDepartmentName();
+            holder.departmentName.setText(displayText);
             Boolean isSelected = gbDep.getSelected();
             Log.d(TAG, "国标部门: " + gbDep.getGbDepartmentName() + ", 选中状态: " + isSelected);
-            holder.checkBox.setChecked(isSelected != null && isSelected);
+            holder.checkBox.setChecked(isSelected != null ? isSelected : false);
         }
 
         holder.itemView.setOnClickListener(v -> {
             Log.d(TAG, "点击部门: position=" + position);
             if (mListener != null) {
-                mListener.onItemClick(department);
+                mListener.onItemClick(item);
             }
         });
     }
@@ -107,15 +144,21 @@ public class DepartmentAdapter extends RecyclerView.Adapter<DepartmentAdapter.In
 
     public class InnerHolder extends RecyclerView.ViewHolder {
         private TextView departmentName;
-        private TextView departmentAttrName;
         private CheckBox checkBox;
 
         public InnerHolder(View itemView) {
             super(itemView);
             Log.d(TAG, "初始化ViewHolder");
             departmentName = itemView.findViewById(R.id.tv_department_name);
-            departmentAttrName = itemView.findViewById(R.id.tv_order_count);
             checkBox = itemView.findViewById(R.id.btn_select);
+
+            // 添加日志检查视图是否找到
+            if (departmentName == null) {
+                Log.e(TAG, "找不到 tv_department_name TextView");
+            } else {
+                Log.d(TAG, "成功找到 tv_department_name TextView");
+            }
+
             checkBox.setClickable(false);  // 让整个item处理点击事件
             Log.d(TAG, "ViewHolder初始化完成");
         }
