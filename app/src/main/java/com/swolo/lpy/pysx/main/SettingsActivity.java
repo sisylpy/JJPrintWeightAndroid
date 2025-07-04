@@ -1,5 +1,6 @@
 package com.swolo.lpy.pysx.main;
 
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -11,7 +12,6 @@ import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -30,12 +30,15 @@ import java.util.HashMap;
 public class SettingsActivity extends BaseActivity {
 
     private Button btnPrinterConnect;
+    private Button btnScaleConnect;
     private Button btnLogout;
     private TextView tvPrinterStatus;
+    private TextView tvScaleStatus;
     private static final String TAG = "SettingsActivity";
     private static final int CONN_STATE_DISCONN = 0x007;
     private int id = 0;
     private boolean isPrinterConnected = false;
+    private boolean isScaleConnected = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,9 +77,12 @@ public class SettingsActivity extends BaseActivity {
 
         // 从设置布局中查找视图
         btnPrinterConnect = settingsLayout.findViewById(R.id.btn_printer_connect);
+        btnScaleConnect = settingsLayout.findViewById(R.id.btn_scale_connect);
         btnLogout = settingsLayout.findViewById(R.id.btn_logout);
         tvPrinterStatus = settingsLayout.findViewById(R.id.tv_printer_status);
+        tvScaleStatus = settingsLayout.findViewById(R.id.tv_scale_status);
         updatePrinterStatus();
+        updateScaleStatus();
     }
 
     @Override
@@ -106,6 +112,15 @@ public class SettingsActivity extends BaseActivity {
             @Override
             public void onClick(View v) {
                 showPrinterConnectDialog();
+            }
+        });
+
+        btnScaleConnect.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // 启动蓝牙称连接界面
+                Intent intent = new Intent(SettingsActivity.this, ScaleActivity.class);
+                startActivityForResult(intent, 1003);
             }
         });
 
@@ -207,6 +222,22 @@ public class SettingsActivity extends BaseActivity {
             
             tvPrinterStatus.setText(status.toString());
             tvPrinterStatus.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
+        }
+    }
+
+    private void updateScaleStatus() {
+        // 检查是否有保存的蓝牙称信息
+        SharedPreferences sp = getSharedPreferences("scale_cache", MODE_PRIVATE);
+        String scaleAddress = sp.getString("scale_address", null);
+        
+        if (scaleAddress != null) {
+            tvScaleStatus.setText("状态: 已连接\n蓝牙地址: " + scaleAddress);
+            tvScaleStatus.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
+            isScaleConnected = true;
+        } else {
+            tvScaleStatus.setText("状态: 未连接");
+            tvScaleStatus.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
+            isScaleConnected = false;
         }
     }
 
@@ -314,6 +345,20 @@ public class SettingsActivity extends BaseActivity {
                 // 立即更新打印机状态
                 updatePrinterStatus();
             }
+        } else if (requestCode == 1003 && resultCode == RESULT_OK) {
+            // 蓝牙称连接成功
+            double weight = data.getDoubleExtra("weight", 0.0);
+            String macAddress = data.getStringExtra("mac_address");
+            if (macAddress != null) {
+                // 保存蓝牙称信息到缓存
+                SharedPreferences sp = getSharedPreferences("scale_cache", MODE_PRIVATE);
+                SharedPreferences.Editor editor = sp.edit();
+                editor.putString("scale_address", macAddress);
+                editor.apply();
+
+                Toast.makeText(this, "蓝牙称连接成功", Toast.LENGTH_SHORT).show();
+                updateScaleStatus();
+            }
         }
     }
 
@@ -321,6 +366,7 @@ public class SettingsActivity extends BaseActivity {
     protected void onResume() {
         super.onResume();
         updatePrinterStatus();
+        updateScaleStatus();
     }
 
     @Override

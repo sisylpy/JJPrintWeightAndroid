@@ -1,7 +1,6 @@
 package com.swolo.lpy.pysx.ui;
 
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -11,6 +10,8 @@ import com.swolo.lpy.pysx.R;
 import com.swolo.lpy.pysx.ui.view.CommonLoadingDialog;
 import com.swolo.lpy.pysx.util.ActivityUtil;
 import com.swolo.lpy.pysx.main.SettingsActivity;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 public abstract class BaseActivity extends AppCompatActivity {
 

@@ -1,8 +1,9 @@
 package com.swolo.lpy.pysx.main.gp;
 
-import android.support.annotation.NonNull;
 
 import java.util.concurrent.ThreadFactory;
+
+import androidx.annotation.NonNull;
 
 /**
  * Created by Administrator

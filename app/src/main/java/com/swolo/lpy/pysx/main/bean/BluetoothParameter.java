@@ -1,9 +1,11 @@
 package com.swolo.lpy.pysx.main.bean;
 
+import android.bluetooth.BluetoothDevice;
+
 public class BluetoothParameter {
     private String bluetoothName;
     private String bluetoothMac;
-    private String bluetoothStrength;
+    private BluetoothDevice bluetoothDevice;
 
     public String getBluetoothName() {
         return bluetoothName;
@@ -21,11 +23,24 @@ public class BluetoothParameter {
         this.bluetoothMac = bluetoothMac;
     }
 
-    public String getBluetoothStrength() {
-        return bluetoothStrength;
+    public BluetoothDevice getBluetoothDevice() {
+        return bluetoothDevice;
     }
 
-    public void setBluetoothStrength(String bluetoothStrength) {
-        this.bluetoothStrength = bluetoothStrength;
+    public void setBluetoothDevice(BluetoothDevice bluetoothDevice) {
+        this.bluetoothDevice = bluetoothDevice;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        BluetoothParameter that = (BluetoothParameter) o;
+        return bluetoothMac != null && bluetoothMac.equals(that.bluetoothMac);
+    }
+
+    @Override
+    public int hashCode() {
+        return bluetoothMac != null ? bluetoothMac.hashCode() : 0;
     }
 } 

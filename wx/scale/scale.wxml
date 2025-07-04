@@ -1,0 +1,27 @@
+<view class="ble-scale-header">
+  <text class="device-info">设备: {{deviceName}} ({{deviceId}})</text>
+  <text class="connect-status">{{connectStatus}}</text>
+</view>
+
+<!-- <view class="weight-display">
+  <text class="weight-label">当前重量：</text>
+  <text class="weight-value">{{weightKg}}</text>
+  <text class="weight-unit">g</text>
+</view>
+
+<view class="weight-raw" wx:if="{{showRaw}}">
+  <text>原始数据: {{rawHex}}</text>
+</view> -->
+<view>
+  <text>当前重量：{{ weightG }} g</text>
+  <text>状态：{{ statusText }}</text>
+  <text wx:if="{{ showRaw }}">原始数据：{{ rawHex }}</text>
+</view>
+
+
+<view class="btn-group">
+  <button class="btn" bindtap="getWeight">获取重量</button>
+  <button class="btn" bindtap="tare">去皮</button>
+  <button class="btn" bindtap="zero">清零</button>
+  <button class="btn" bindtap="toggleRaw">{{showRaw ? '隐藏原始数据' : '显示原始数据'}}</button>
+</view> 

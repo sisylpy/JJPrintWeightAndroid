@@ -2,9 +2,6 @@ package com.swolo.lpy.pysx.main;
 
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
@@ -23,6 +20,10 @@ import com.swolo.lpy.pysx.ui.view.CommonLoadingDialog;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 public class DepartmentListActivity extends AppCompatActivity implements MainContract.DepartmentListView {
     private static final String TAG = "DepartmentListActivity";
@@ -76,7 +77,7 @@ public class DepartmentListActivity extends AppCompatActivity implements MainCon
         }
         rvDepartments.setLayoutManager(new LinearLayoutManager(this));
         // 添加分割线
-        rvDepartments.addItemDecoration(new android.support.v7.widget.DividerItemDecoration(this, android.support.v7.widget.DividerItemDecoration.VERTICAL));
+        rvDepartments.addItemDecoration(new androidx.recyclerview.widget.DividerItemDecoration(this, androidx.recyclerview.widget.DividerItemDecoration.VERTICAL));
         rvDepartments.setVisibility(View.VISIBLE);
 
         // 初始化返回按钮

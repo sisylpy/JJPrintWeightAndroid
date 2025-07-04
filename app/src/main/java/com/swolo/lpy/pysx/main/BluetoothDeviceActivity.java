@@ -11,8 +11,6 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,10 +21,8 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-//import androidx.appcompat.app.AppCompatActivity;
-import android.support.v7.app.AppCompatActivity;
 import com.swolo.lpy.pysx.R;
-import com.swolo.lpy.pysx.main.adapter.BluetoothDeviceAdapter;
+import com.swolo.lpy.pysx.main.adapter.BluetoothDeviceListAdapter;
 import com.swolo.lpy.pysx.main.bean.BluetoothParameter;
 import com.printer.command.LabelCommand;
 import java.util.ArrayList;
@@ -37,6 +33,10 @@ import java.util.Set;
 import java.util.Vector;
 import java.lang.reflect.Method;
 
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
 public class BluetoothDeviceActivity extends AppCompatActivity {
     private static final String TAG = BluetoothDeviceActivity.class.getSimpleName();
     private static final int REQUEST_BLUETOOTH_PERMISSIONS = 1001;
@@ -44,7 +44,7 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
     private static final int REQUEST_BLUETOOTH_CONNECT_PERMISSION = 1002;
     
     private ListView lvDevices;
-    private BluetoothDeviceAdapter adapter;
+    private BluetoothDeviceListAdapter adapter;
     private List<BluetoothParameter> pairedDevices = new ArrayList<>();
     private List<BluetoothParameter> newDevices = new ArrayList<>();
     private BluetoothAdapter mBluetoothAdapter;
@@ -71,7 +71,7 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
                 
                 // 检查权限
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    if (ActivityCompat.checkSelfPermission(BluetoothDeviceActivity.this, 
+                    if (ActivityCompat.checkSelfPermission(BluetoothDeviceActivity.this,
                             Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                         return;
                     }
@@ -89,7 +89,7 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
                     BluetoothParameter parameter = new BluetoothParameter();
                     parameter.setBluetoothName(deviceName != null ? deviceName : "未知设备");
                     parameter.setBluetoothMac(deviceAddress);
-                    parameter.setBluetoothStrength(String.valueOf(rssi));
+                    parameter.setBluetoothDevice(device);
                     
                     // 检查是否已存在
                     boolean exists = false;
@@ -103,7 +103,6 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
                     if (!exists) {
                         Log.d(TAG, "添加新设备到列表: " + deviceName + " (" + deviceAddress + ")");
                         newDevices.add(parameter);
-                        Collections.sort(newDevices, new Signal());
                         adapter.notifyDataSetChanged();
                     }
                 }
@@ -159,12 +158,6 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
         }
     };
 
-    static class Signal implements Comparator<BluetoothParameter> {
-        public int compare(BluetoothParameter p1, BluetoothParameter p2) {
-            return p1.getBluetoothStrength().compareTo(p2.getBluetoothStrength());
-        }
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -198,119 +191,12 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
         lvDevices = findViewById(R.id.lv_devices);
         btnSearch = findViewById(R.id.btn_search);
         
-        adapter = new BluetoothDeviceAdapter(pairedDevices, newDevices, this);
+        adapter = new BluetoothDeviceListAdapter(pairedDevices, newDevices, this);
         lvDevices.setAdapter(adapter);
         
-        lvDevices.setOnItemClickListener((parent, view, position, id) -> {
-            Log.d(TAG, "点击了设备列表项，位置: " + position);
-            if (position == 0 || position == pairedDevices.size() + 1) {
-                Log.d(TAG, "点击了标题项，忽略");
-                return;
-            }
-            
-            String mac = null;
-            BluetoothDevice selectedDevice = null;
-            
-            if (position <= pairedDevices.size()) {
-                mac = pairedDevices.get(position - 1).getBluetoothMac();
-                Log.d(TAG, "选择了已配对设备，MAC: " + mac);
-            } else {
-                mac = newDevices.get(position - pairedDevices.size() - 2).getBluetoothMac();
-                Log.d(TAG, "选择了新设备，MAC: " + mac);
-                
-                // 获取选中的设备
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) 
-                            != PackageManager.PERMISSION_GRANTED) {
-                        Log.e(TAG, "缺少蓝牙连接权限");
-                        Toast.makeText(this, "缺少蓝牙连接权限", Toast.LENGTH_SHORT).show();
-                        ActivityCompat.requestPermissions(this, 
-                            new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 
-                            REQUEST_BLUETOOTH_CONNECT_PERMISSION);
-                        return;
-                    }
-                }
-                
-                selectedDevice = mBluetoothAdapter.getRemoteDevice(mac);
-                if (selectedDevice == null) {
-                    Log.e(TAG, "无法获取设备信息");
-                    Toast.makeText(this, "无法获取设备信息", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                
-                // 检查设备是否已配对
-                if (selectedDevice.getBondState() != BluetoothDevice.BOND_BONDED) {
-                    Log.d(TAG, "设备未配对，开始配对");
-                    try {
-                        // 停止搜索
-                        cancelDiscovery();
-                        
-                        // 开始配对
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) 
-                                    != PackageManager.PERMISSION_GRANTED) {
-                                return;
-                            }
-                        }
-                        
-                        // 检查API版本
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                            selectedDevice.createBond();
-                        } else {
-                            // 对于API 19以下的版本，使用反射调用createBond方法
-                            try {
-                                Method method = selectedDevice.getClass().getMethod("createBond");
-                                method.invoke(selectedDevice);
-                            } catch (Exception e) {
-                                Log.e(TAG, "配对失败", e);
-                                Toast.makeText(this, "配对失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                                return;
-                            }
-                        }
-                        
-                        // 显示配对中提示
-                        Toast.makeText(this, "正在配对设备，请稍候...", Toast.LENGTH_SHORT).show();
-                        return;
-                    } catch (Exception e) {
-                        Log.e(TAG, "配对失败", e);
-                        Toast.makeText(this, "配对失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                }
-            }
-            
-            if (mBluetoothAdapter == null) {
-                Log.e(TAG, "蓝牙适配器为空");
-                return;
-            }
-            
-            // 检查权限
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) 
-                        != PackageManager.PERMISSION_GRANTED) {
-                    Log.e(TAG, "缺少蓝牙连接权限");
-                    Toast.makeText(this, "缺少蓝牙连接权限", Toast.LENGTH_SHORT).show();
-                    ActivityCompat.requestPermissions(this, 
-                        new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 
-                        REQUEST_BLUETOOTH_CONNECT_PERMISSION);
-                    return;
-                }
-            }
-            
-            Log.d(TAG, "取消蓝牙搜索");
-            mBluetoothAdapter.cancelDiscovery();
-            
-            // 保存选中的MAC地址
-            mSelectedMacAddress = mac;
-            
-            Intent intent = new Intent();
-            intent.putExtra(EXTRA_DEVICE_ADDRESS, mac);
-            setResult(Activity.RESULT_OK, intent);
-            
-            Log.d(TAG, "开始打印测试小票");
-            printTestReceipt();
-            
-            finish();
+        adapter.setOnItemClickListener(device -> {
+            // 处理设备点击事件
+            connectToDevice(device);
         });
 
         btnSearch.setOnClickListener(v -> {
@@ -465,7 +351,7 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
                 String deviceName = device.getName();
                 parameter.setBluetoothName(deviceName != null ? deviceName : "未知设备");
                 parameter.setBluetoothMac(device.getAddress());
-                parameter.setBluetoothStrength("已配对");
+                parameter.setBluetoothDevice(device);
                 this.pairedDevices.add(parameter);
             }
             adapter.notifyDataSetChanged();
@@ -666,5 +552,31 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
             Log.e(TAG, "打印测试小票失败", e);
             Toast.makeText(this, "打印测试小票失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void connectToDevice(BluetoothParameter parameter) {
+        // 检查权限
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) 
+                    != PackageManager.PERMISSION_GRANTED) {
+                Log.e(TAG, "缺少蓝牙连接权限");
+                Toast.makeText(this, "缺少蓝牙连接权限", Toast.LENGTH_SHORT).show();
+                ActivityCompat.requestPermissions(this, 
+                    new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 
+                    REQUEST_BLUETOOTH_CONNECT_PERMISSION);
+                return;
+            }
+        }
+
+        BluetoothDevice device = parameter.getBluetoothDevice();
+        if (device == null) {
+            Log.e(TAG, "设备对象为空");
+            Toast.makeText(this, "设备对象为空", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Log.d(TAG, "连接到设备: " + parameter.getBluetoothName());
+        mSelectedMacAddress = parameter.getBluetoothMac();
+        printTestReceipt();
     }
 } 

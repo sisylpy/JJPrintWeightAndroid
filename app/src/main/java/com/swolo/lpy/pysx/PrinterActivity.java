@@ -10,7 +10,6 @@ import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbEndpoint;
 import android.hardware.usb.UsbInterface;
 import android.hardware.usb.UsbManager;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -20,6 +19,8 @@ import android.widget.Toast;
 
 import java.util.HashMap;
 import java.util.Iterator;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 
 public class PrinterActivity extends AppCompatActivity {

@@ -1,0 +1,50 @@
+.ble-scale-header {
+  padding: 16px;
+  background: #e3f2fd;
+  border-radius: 8px;
+  margin: 12px;
+}
+.device-info {
+  font-size: 14px;
+  color: #1976d2;
+}
+.connect-status {
+  float: right;
+  color: #388e3c;
+  font-weight: bold;
+}
+.weight-display {
+  margin: 32px 0 24px 0;
+  text-align: center;
+}
+.weight-label {
+  font-size: 20px;
+  color: #333;
+}
+.weight-value {
+  font-size: 48px;
+  color: #1976d2;
+  font-weight: bold;
+  margin: 0 8px;
+}
+.weight-unit {
+  font-size: 20px;
+  color: #333;
+}
+.btn-group {
+  display: flex;
+  justify-content: space-around;
+  margin: 24px 0;
+}
+.btn {
+  background: #1976d2;
+  color: #fff;
+  border-radius: 6px;
+  padding: 12px 24px;
+  font-size: 16px;
+}
+.weight-raw {
+  margin: 12px;
+  color: #888;
+  font-size: 12px;
+} 

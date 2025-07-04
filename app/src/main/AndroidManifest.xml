@@ -87,6 +87,10 @@
             android:label="蓝牙设备"
             android:theme="@style/AppTheme"/>
 
+        <activity android:name=".main.ScaleActivity"
+            android:label="蓝牙称"
+            android:theme="@style/AppTheme"/>
+
     </application>
 
 </manifest>

@@ -5,9 +5,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import android.support.v7.widget.RecyclerView;
 import android.widget.CheckBox;
-import android.support.annotation.NonNull;
 
 import com.swolo.lpy.pysx.R;
 import com.swolo.lpy.pysx.main.modal.NxDepartmentEntity;
@@ -15,6 +13,9 @@ import com.swolo.lpy.pysx.main.modal.GbDepartmentEntity;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
 
 public class DepartmentAdapter extends RecyclerView.Adapter<DepartmentAdapter.InnerHolder> {
     private static final String TAG = "DepartmentAdapter";

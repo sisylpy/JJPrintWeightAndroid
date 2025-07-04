@@ -10,6 +10,7 @@ import com.swolo.lpy.pysx.api.GoodsApi;
 import com.swolo.lpy.pysx.http.HttpManager;
 import com.swolo.lpy.pysx.main.modal.NxDepartmentOrdersEntity;
 import com.swolo.lpy.pysx.main.modal.NxDistributerGoodsShelfEntity;
+import com.swolo.lpy.pysx.main.modal.NxDistributerGoodsShelfGoodsEntity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,8 @@ public class StockOutPresenterImpl implements MainContract.StockOutPresenter {
         if (mView != null) {
             mView.showLoading();
         }
+        
+        Log.d(TAG, "开始获取库存商品数据: disId=" + disId + ", goodsType=" + goodsType);
         
         HttpManager.getInstance()
             .request(
@@ -60,9 +63,20 @@ public class StockOutPresenterImpl implements MainContract.StockOutPresenter {
 
                 @Override
                 public void onNext(List<NxDistributerGoodsShelfEntity> result) {
+                    Log.d(TAG, "接口原始数据: " + new Gson().toJson(result));
                     if (mView != null) {
                         if (result != null && !result.isEmpty()) {
                             Log.d(TAG, "获取到货架数据，数量: " + result.size());
+                            // 检查每个商品的订单数据
+                            for (NxDistributerGoodsShelfEntity shelf : result) {
+                                if (shelf.getNxDisGoodsShelfGoodsEntities() != null) {
+                                    for (NxDistributerGoodsShelfGoodsEntity goods : shelf.getNxDisGoodsShelfGoodsEntities()) {
+                                        Log.d(TAG, "商品: " + goods.getNxDistributerGoodsEntity().getNxDgGoodsName() + 
+                                              ", 订单数量: " + (goods.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities() != null ? 
+                                              goods.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities().size() : 0));
+                                    }
+                                }
+                            }
                             mView.getStockGoodsSuccess(result);
                         } else {
                             mView.getStockGoodsFail("没有获取到数据");
@@ -154,7 +168,8 @@ public class StockOutPresenterImpl implements MainContract.StockOutPresenter {
         
         HttpManager.getInstance()
             .request(
-                HttpManager.getInstance().getApi(GoodsApi.class).pickerGetToStockGoodsWithDepIdsKf(nxDepIds, gbDepIds, disId, goodsType),
+                HttpManager.getInstance().getApi(GoodsApi.class).pickerGetToStockGoodsWithDepIdsKf(
+                    nxDepIds, gbDepIds, disId, goodsType),
                 new com.google.gson.reflect.TypeToken<List<NxDistributerGoodsShelfEntity>>() {}
             )
             .subscribeOn(rx.schedulers.Schedulers.io())
@@ -162,7 +177,7 @@ public class StockOutPresenterImpl implements MainContract.StockOutPresenter {
             .subscribe(new rx.Subscriber<List<NxDistributerGoodsShelfEntity>>() {
                 @Override
                 public void onCompleted() {
-                    Log.d(TAG, "带部门ID的库存商品数据加载完成");
+                    Log.d(TAG, "数据加载完成");
                     if (mView != null) {
                         mView.hideLoading();
                     }
@@ -170,7 +185,7 @@ public class StockOutPresenterImpl implements MainContract.StockOutPresenter {
 
                 @Override
                 public void onError(Throwable e) {
-                    Log.e(TAG, "带部门ID的库存商品数据加载失败: " + e.getMessage());
+                    Log.e(TAG, "加载失败: " + e.getMessage());
                     if (mView != null) {
                         mView.hideLoading();
                         mView.getStockGoodsFail(e.getMessage());
@@ -179,13 +194,33 @@ public class StockOutPresenterImpl implements MainContract.StockOutPresenter {
 
                 @Override
                 public void onNext(List<NxDistributerGoodsShelfEntity> result) {
+                    Log.d(TAG, "接口原始数据: " + new Gson().toJson(result));
                     if (mView != null) {
                         if (result != null && !result.isEmpty()) {
-                            Log.d(TAG, "获取到带部门ID的货架数据，数量: " + result.size());
+                            Log.d(TAG, "获取到货架数据，数量: " + result.size());
+                            // 检查每个商品的订单数据
+                            for (NxDistributerGoodsShelfEntity shelf : result) {
+                                if (shelf.getNxDisGoodsShelfGoodsEntities() != null) {
+                                    for (NxDistributerGoodsShelfGoodsEntity goods : shelf.getNxDisGoodsShelfGoodsEntities()) {
+                                        Log.d(TAG, "商品: " + goods.getNxDistributerGoodsEntity().getNxDgGoodsName() + 
+                                              ", 订单数量: " + (goods.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities() != null ? 
+                                              goods.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities().size() : 0));
+                                        // 详细记录订单数据
+                                        if (goods.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities() != null) {
+                                            for (NxDepartmentOrdersEntity order : goods.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities()) {
+                                                Log.d(TAG, "订单详情: " +
+                                                    "部门=" + (order.getNxDepartmentEntity() != null ? 
+                                                        order.getNxDepartmentEntity().getNxDepartmentName() : "null") +
+                                                    ", 数量=" + order.getNxDoQuantity() +
+                                                    ", 单位=" + order.getNxDoStandard());
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                             mView.getStockGoodsSuccess(result);
                         } else {
-                            Log.d(TAG, "没有获取到数据，清空列表");
-                            mView.getStockGoodsSuccess(new ArrayList<>());
+                            mView.getStockGoodsFail("没有获取到数据");
                         }
                     }
                 }

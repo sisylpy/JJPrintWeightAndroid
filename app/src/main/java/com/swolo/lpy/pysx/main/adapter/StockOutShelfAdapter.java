@@ -1,6 +1,5 @@
 package com.swolo.lpy.pysx.main.adapter;
 
-import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,6 +11,8 @@ import com.swolo.lpy.pysx.main.modal.NxDistributerGoodsShelfEntity;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import androidx.recyclerview.widget.RecyclerView;
 
 public class StockOutShelfAdapter extends RecyclerView.Adapter<StockOutShelfAdapter.InnerHolder> {
    private int selectedPosition = 0;

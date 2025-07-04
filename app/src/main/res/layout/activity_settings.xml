@@ -20,29 +20,61 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <Button
-            android:id="@+id/btn_printer_connect"
-            android:layout_width="wrap_content"
+        <!-- 打印机连接部分 -->
+        <TextView
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="打印机连接" />
+            android:text="打印机设置"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
 
         <TextView
             android:id="@+id/tv_printer_status"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="8dp"
-            android:layout_marginStart="8dp"
+            android:text="状态: 未连接"
             android:textSize="14sp"
-            android:textColor="#FF0000"
-            android:background="#F5F5F5"
-            android:padding="4dp"
-            android:visibility="visible" />
+            android:layout_marginBottom="8dp"/>
 
         <Button
-            android:id="@+id/btn_logout"
-            android:layout_width="wrap_content"
+            android:id="@+id/btn_printer_connect"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="退出登录" />
+            android:text="连接打印机"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- 蓝牙称连接部分 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="蓝牙称设置"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:id="@+id/tv_scale_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="状态: 未连接"
+            android:textSize="14sp"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btn_scale_connect"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="连接蓝牙称"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- 退出登录按钮 -->
+        <Button
+            android:id="@+id/btn_logout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="退出登录"
+            android:layout_marginTop="32dp"/>
 
     </LinearLayout>
 

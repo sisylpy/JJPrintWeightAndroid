@@ -1,10 +1,6 @@
 package com.swolo.lpy.pysx.main;
 
-import android.app.Dialog;
 import android.app.PendingIntent;
-import android.bluetooth.le.ScanCallback;
-import android.bluetooth.le.ScanResult;
-import android.bluetooth.le.ScanSettings;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -17,24 +13,19 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
-import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-import androidx.appcompat.widget.Toolbar;
-
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
+import android.support.v4.widget.SwipeRefreshLayout;
+import android.support.v7.widget.GridLayoutManager;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
-import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.bluetooth.BluetoothAdapter;
@@ -44,8 +35,6 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 
 import com.swolo.lpy.pysx.R;
-import com.swolo.lpy.pysx.dialog.ConnectScaleDialog;
-import com.swolo.lpy.pysx.dialog.StockOutGoodsDialog;
 import com.swolo.lpy.pysx.main.adapter.StockOutAdapter;
 import com.swolo.lpy.pysx.main.adapter.StockOutGoodsAdapter;
 import com.swolo.lpy.pysx.main.adapter.StockOutShelfAdapter;
@@ -54,7 +43,6 @@ import com.swolo.lpy.pysx.main.modal.GbDepartmentEntity;
 import com.swolo.lpy.pysx.main.modal.NxDepartmentEntity;
 import com.swolo.lpy.pysx.main.modal.NxDepartmentOrdersEntity;
 import com.swolo.lpy.pysx.main.modal.NxDistributerGoodsShelfEntity;
-import com.swolo.lpy.pysx.main.modal.NxDistributerGoodsShelfGoodsEntity;
 import com.swolo.lpy.pysx.main.presenter.MainContract;
 import com.swolo.lpy.pysx.main.presenter.StockOutPresenterImpl;
 import com.swolo.lpy.pysx.ui.BaseActivity;
@@ -72,10 +60,6 @@ import java.util.Vector;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import android.bluetooth.le.BluetoothLeScanner;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.Fragment;
-import android.app.AlertDialog;
 
 public class StockOutActivity extends BaseActivity implements MainContract.StockOutView {
 
@@ -84,7 +68,6 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     private StockOutGoodsAdapter goodsAdapter;
     private StockOutPresenterImpl stockOutPresenter;
     private int currentShelfIndex = 0; // 添加当前选中的货架索引
-    private List<NxDistributerGoodsShelfEntity> shelfEntities = new ArrayList<>(); // 添加货架实体列表
 
     // 设置默认值
     private Integer disId;  // 将从用户信息中获取
@@ -128,15 +111,6 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     private ProgressDialog progressDialog;
 
     private static final int REQUEST_BLUETOOTH_CONNECT_PERMISSION = 1002;
-    private static final int REQUEST_SCALE_ACTIVITY = 1003;
-    private double currentWeight = 0;
-
-    private Dialog currentDialog;
-
-    private TextView tvScaleInfo;
-    private boolean isScaleConnected = false;
-    private String scaleAddress = null;
-    private String scaleName = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -259,56 +233,6 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
                 updatePrinterInfo(); // 立即更新打印机信息
             }
 
-            // 添加蓝牙称按钮
-            ImageButton btnScale = findViewById(R.id.btn_scale);
-            if (btnScale != null) {
-                btnScale.setOnClickListener(v -> {
-                    Log.d(TAG, "点击蓝牙称按钮，准备启动ScaleActivity");
-                    try {
-                        // 检查蓝牙权限
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) 
-                                    != PackageManager.PERMISSION_GRANTED) {
-                                Log.e(TAG, "缺少蓝牙连接权限");
-                                showToast("缺少蓝牙连接权限");
-                                ActivityCompat.requestPermissions(this, 
-                                    new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 
-                                    REQUEST_BLUETOOTH_CONNECT_PERMISSION);
-                                return;
-                            }
-                        }
-
-                        // 检查蓝牙是否开启
-                        if (bluetoothAdapter == null) {
-                            Log.e(TAG, "设备不支持蓝牙");
-                            showToast("设备不支持蓝牙");
-                            return;
-                        }
-
-                        if (!bluetoothAdapter.isEnabled()) {
-                            Log.d(TAG, "蓝牙未开启");
-                            showToast("请先开启蓝牙");
-                            return;
-                        }
-
-                        Log.d(TAG, "蓝牙状态正常，启动ScaleActivity");
-                        Intent intent = new Intent(this, ScaleActivity.class);
-                        startActivityForResult(intent, REQUEST_SCALE_ACTIVITY);
-                        Log.d(TAG, "ScaleActivity启动成功");
-                    } catch (Exception e) {
-                        Log.e(TAG, "启动ScaleActivity失败", e);
-                        showToast("启动蓝牙称页面失败: " + e.getMessage());
-                    }
-                });
-            }
-
-            Button btnConnectScale = findViewById(R.id.btn_connect_scale);
-            if (btnConnectScale != null) {
-                btnConnectScale.setOnClickListener(v -> {
-                    showConnectScaleDialog();
-                });
-            }
-
             bindAction();
             Log.d(TAG, "bindAction执行完成");
             setView();
@@ -319,22 +243,6 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
                 Log.d(TAG, "开始自动连接打印机");
                 autoConnectPrinter();
             }, 1000);
-
-            tvScaleInfo = findViewById(R.id.tv_scale_info);
-            loadScaleCache();
-            updateScaleInfo();
-            autoConnectScale();
-
-            if (isBluetoothScaleConnected()) {
-                Log.d(TAG, "蓝牙称连接成功");
-                if (!isBluetoothPrinterConnected()) {
-                    Log.d(TAG, "蓝牙打印机未连接");
-                    showPrinterNotConnectedDialog();
-                } else {
-                    Log.d(TAG, "蓝牙打印机连接成功，准备打印消息");
-                    printSuccessMessage();
-                }
-            }
 
             Log.d(TAG, "onCreate执行完成");
         } catch (Exception e) {
@@ -425,15 +333,6 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
                 Log.d(TAG, "货架点击，保存索引: " + currentShelfIndex + ", 货架名称: " + entity.getNxDistributerGoodsShelfName());
                 // 显示对应货架下的商品
                 goodsAdapter.setGoodsList(entity.getNxDisGoodsShelfGoodsEntities());
-            }
-        });
-
-        // 设置商品点击事件
-        goodsAdapter.setOnItemClickListener(new StockOutGoodsAdapter.OnItemClickListener() {
-            @Override
-            public void onItemClick(NxDistributerGoodsShelfGoodsEntity entity) {
-                Log.d(TAG, "商品点击: " + entity.getNxDistributerGoodsEntity().getNxDgGoodsName());
-                showStockOutDialog(entity);
             }
         });
 
@@ -547,53 +446,45 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
 
     // 请求数据成功时调用
     @Override
-    public void getStockGoodsSuccess(List<NxDistributerGoodsShelfEntity> result) {
-        Log.d(TAG, "获取到商品数据，货架数量: " + result.size());
+    public void getStockGoodsSuccess(List<NxDistributerGoodsShelfEntity> outGoods) {
+        stopLoading();
+        Log.d(TAG, "getStockGoodsSuccess: 收到数据，数量=" + (outGoods != null ? outGoods.size() : 0) + 
+              ", 当前选中索引=" + currentShelfIndex);
+        
+        if (outGoods == null || outGoods.isEmpty()) {
+            tvNoData.setVisibility(View.VISIBLE);
+            shelfAdapter.setData(new ArrayList<>());
+            goodsAdapter.setGoodsList(new ArrayList<>());
+            // 如果是从部门选择返回，且数据为空，不再继续请求
+            if (isFromDepartmentSelection) {
+                Log.d(TAG, "getStockGoodsSuccess: 从部门选择返回且数据为空，停止后续请求");
+                return;
+            }
+        } else {
+            tvNoData.setVisibility(View.GONE);
             
             // 保存当前选中的货架索引
             int oldShelfIndex = currentShelfIndex;
+            Log.d(TAG, "保存旧的货架索引: " + oldShelfIndex);
             
             // 更新数据
-        shelfEntities.clear();
-        shelfEntities.addAll(result);
-        
-        // 检查当前选中的货架索引是否有效
-        if (currentShelfIndex >= shelfEntities.size()) {
-                currentShelfIndex = 0;
-            Log.d(TAG, "当前货架索引无效，重置为0");
-        }
-        
-        // 获取当前货架的商品列表
-        List<NxDistributerGoodsShelfGoodsEntity> currentGoods = 
-            shelfEntities.get(currentShelfIndex).getNxDisGoodsShelfGoodsEntities();
+            shelfAdapter.setData(outGoods);
             
-        Log.d(TAG, "当前货架商品数量: " + (currentGoods != null ? currentGoods.size() : 0));
-        
-        // 检查每个商品的订单数据
-        if (currentGoods != null) {
-            for (NxDistributerGoodsShelfGoodsEntity goods : currentGoods) {
-                Log.d(TAG, "商品: " + goods.getNxDistributerGoodsEntity().getNxDgGoodsName() + 
-                      ", 订单数量aaaa: " + goods.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities().size());
-                // 详细记录订单数据
-                if (goods.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities() != null) {
-                    for (NxDepartmentOrdersEntity order : goods.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities()) {
-                        Log.d(TAG, "订单详情vbv: " +
-                            "部门=" + (order.getNxDepartmentEntity() != null ? 
-                                order.getNxDepartmentEntity().getNxDepartmentName() : "null") +
-                            ", 数量=" + order.getNxDoQuantity() +
-                            ", 单位=" + order.getNxDoStandard());
-                    }
-                }
+            // 确保索引在有效范围内
+            if (oldShelfIndex >= 0 && oldShelfIndex < outGoods.size()) {
+                // 恢复之前选中的货架
+                currentShelfIndex = oldShelfIndex;
+                Log.d(TAG, "恢复货架索引: " + currentShelfIndex);
+                shelfAdapter.setSelectedPosition(currentShelfIndex);
+                // 显示对应货架的商品
+                goodsAdapter.setGoodsList(outGoods.get(currentShelfIndex).getNxDisGoodsShelfGoodsEntities());
+            } else {
+                // 如果索引无效，显示第一个货架的商品
+                currentShelfIndex = 0;
+                Log.d(TAG, "重置货架索引为0");
+                shelfAdapter.setSelectedPosition(0);
+                goodsAdapter.setGoodsList(outGoods.get(0).getNxDisGoodsShelfGoodsEntities());
             }
-        }
-        
-        // 更新UI
-        updateShelfTabs();
-        updateGoodsList();
-        
-        // 如果货架索引发生变化，更新选中状态
-        if (oldShelfIndex != currentShelfIndex) {
-            updateShelfSelection();
         }
     }
 
@@ -622,7 +513,7 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     }
 
     // 2. 串行打印和保存
-    public void printAndSaveOrders(List<NxDepartmentOrdersEntity> orderList, int index) {
+    private void printAndSaveOrders(List<NxDepartmentOrdersEntity> orderList, int index) {
         if (index >= orderList.size()) {
             runOnUiThread(() -> {
                 Toast.makeText(this, "订单打印并保存成功", Toast.LENGTH_SHORT).show();
@@ -687,50 +578,37 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
 
     // 4. 打印实现（只打印商品名称和出库数量）
     private void printOrder(NxDepartmentOrdersEntity order, PrintCallback callback) {
-        Log.d(TAG, "【打印】开始打印订单");
-        Log.d(TAG, "【打印】订单信息: " + 
-            "商品=" + (order.getNxDistributerGoodsEntity() != null ? order.getNxDistributerGoodsEntity().getNxDgGoodsName() : "null") +
-            ", 数量=" + order.getNxDoQuantity() +
-            ", 重量=" + order.getNxDoWeight() +
-            ", 单位=" + order.getNxDoStandard());
-
+        Log.d(TAG, "开始打印订单");
         if (isEmulator()) {
-            Log.d(TAG, "【打印】模拟器环境，跳过打印");
+            Log.d(TAG, "模拟器环境，跳过打印");
             callback.onPrintFail("模拟器环境，跳过打印");
             return;
         }
 
         // 检查打印机状态
         if (!checkPrinterStatus()) {
-            Log.e(TAG, "【打印】打印机未就绪");
+            Log.e(TAG, "打印机未就绪");
             callback.onPrintFail("打印机未就绪，请检查连接");
             return;
         }
 
         ThreadPool.getInstantiation().addTask(() -> {
             try {
-                DeviceConnFactoryManager manager = DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0];
-                if (manager == null) {
-                    Log.e(TAG, "【打印】打印机管理器为空");
-                    callback.onPrintFail("打印机管理器未初始化");
-                    return;
-                }
-
-                PrinterCommand commandType = manager.getCurrentPrinterCommand();
-                Log.d(TAG, "【打印】打印机指令类型: " + commandType);
+                PrinterCommand commandType = DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].getCurrentPrinterCommand();
+                Log.d(TAG, "打印机指令类型: " + commandType);
                 
                 if (commandType == PrinterCommand.ESC) {
-                    Log.d(TAG, "【打印】使用ESC指令打印");
+                    Log.d(TAG, "使用ESC指令打印");
                     printWithESC(order, callback);
                 } else if (commandType == PrinterCommand.TSC) {
-                    Log.d(TAG, "【打印】使用TSC指令打印");
+                    Log.d(TAG, "使用TSC指令打印");
                     printWithTSC(order, callback);
                 } else {
-                    Log.e(TAG, "【打印】不支持的打印机指令集: " + commandType);
+                    Log.e(TAG, "不支持的打印机指令集: " + commandType);
                     callback.onPrintFail("不支持的打印机指令集");
                 }
             } catch (Exception e) {
-                Log.e(TAG, "【打印】打印异常", e);
+                Log.e(TAG, "打印异常", e);
                 handlePrintError(e, callback);
             }
         });
@@ -750,42 +628,27 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     }
 
     private void printWithESC(NxDepartmentOrdersEntity order, PrintCallback callback) throws Exception {
-        Log.d(TAG, "【打印】开始ESC打印");
-        try {
-            EscCommand esc = new EscCommand();
-            esc.addInitializePrinter();
-            esc.addSelectJustification(EscCommand.JUSTIFICATION.CENTER);
-            
-            // 添加标题
-            String departmentName = getDepartmentName(order);
-            Log.d(TAG, "【打印】部门名称: " + departmentName);
-            esc.addText(departmentName + "\n");
-            esc.addText("----------------\n");
-            
-            // 商品信息
-            String goodsName = order.getNxDistributerGoodsEntity() != null ? 
-                order.getNxDistributerGoodsEntity().getNxDgGoodsName() : "";
-            String quantity = order.getNxDoQuantity() != null ? order.getNxDoQuantity().toString() : "0";
-            Log.d(TAG, "【打印】商品信息: " + goodsName + ", 数量: " + quantity);
-            esc.addText("商品: " + goodsName + "\n");
-            esc.addText("数量: " + quantity + "\n");
-            
-            // 出库重量
-            String weight = order.getNxDoWeight() != null ? order.getNxDoWeight() : "0";
-            String standard = order.getNxDoStandard() != null ? order.getNxDoStandard() : "";
-            Log.d(TAG, "【打印】出库信息: " + weight + standard);
-            esc.addText("出库: " + weight + standard + "\n");
-            esc.addText("----------------\n");
-            
-            esc.addCutPaper();
-            Vector<Byte> datas = esc.getCommand();
-            Log.d(TAG, "【打印】ESC命令数据大小: " + (datas != null ? datas.size() : 0));
-            
-            sendPrintData(datas, callback);
-        } catch (Exception e) {
-            Log.e(TAG, "【打印】ESC打印异常", e);
-            throw e;
-        }
+        EscCommand esc = new EscCommand();
+        esc.addInitializePrinter();
+        esc.addSelectJustification(EscCommand.JUSTIFICATION.CENTER);
+        
+        // 添加标题
+        String departmentName = getDepartmentName(order);
+        esc.addText(departmentName + "\n");
+        esc.addText("----------------\n");
+        
+        // 商品信息
+        String goodsName = order.getNxDistributerGoodsEntity().nxDgGoodsName;
+        String quantity = order.getNxDoQuantity() != null ? order.getNxDoQuantity().toString() : "0";
+        esc.addText("商品: " + goodsName + "\n");
+        esc.addText("数量: " + quantity + "\n");
+        esc.addText("订货: " + order.nxDoWeight + order.nxDoStandard + "\n");
+        esc.addText("----------------\n");
+        
+        esc.addCutPaper();
+        Vector<Byte> datas = esc.getCommand();
+        
+        sendPrintData(datas, callback);
     }
 
     private void printWithTSC(NxDepartmentOrdersEntity order, PrintCallback callback) throws Exception {
@@ -810,25 +673,21 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
                 LabelCommand.FONTMUL.MUL_2, departmentName);
             
             // 商品信息
-            String goodsName = order.getNxDistributerGoodsEntity() != null ? 
-                order.getNxDistributerGoodsEntity().getNxDgGoodsName() : "";
-            String standardName = order.getNxDistributerGoodsEntity() != null ? 
-                order.getNxDistributerGoodsEntity().getNxDgGoodsStandardname() : "";
-            String weight = order.getNxDoWeight() != null ? order.getNxDoWeight() : "0";
-            String standard = order.getNxDoStandard() != null ? order.getNxDoStandard() : "";
-            Log.d(TAG, "商品信息: " + goodsName + ", 规格: " + standardName + ", 数量: " + weight);
+            String goodsName = order.getNxDistributerGoodsEntity().nxDgGoodsName;
+            String standardName = order.getNxDistributerGoodsEntity().nxDgGoodsStandardname;
+            String quantity = order.getNxDoWeight() != null ? order.getNxDoWeight().toString() : "0";
+            Log.d(TAG, "商品信息: " + goodsName + ", 规格: " + standardName + ", 数量: " + quantity);
             
             tsc.addText(120, 550, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, 
                 LabelCommand.ROTATION.ROTATION_270, LabelCommand.FONTMUL.MUL_2, 
-                LabelCommand.FONTMUL.MUL_2, goodsName + " " + weight + standard);
+                LabelCommand.FONTMUL.MUL_2, goodsName + " " + quantity + standardName);
             
             // 订货信息
             String orderQuantity = order.getNxDoQuantity() != null ? order.getNxDoQuantity().toString() : "0";
-            String orderStandard = order.getNxDoStandard() != null ? order.getNxDoStandard() : "";
             Log.d(TAG, "订货数量: " + orderQuantity);
             tsc.addText(190, 550, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, 
                 LabelCommand.ROTATION.ROTATION_270, LabelCommand.FONTMUL.MUL_2, 
-                LabelCommand.FONTMUL.MUL_2, "订货: " + orderQuantity + orderStandard);
+                LabelCommand.FONTMUL.MUL_2, "订货: " + orderQuantity + order.getNxDoStandard());
             
             // 备注
             String remark = order.getNxDoRemark();
@@ -893,31 +752,29 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     }
 
     private void sendPrintData(Vector<Byte> datas, PrintCallback callback) throws Exception {
-        Log.d(TAG, "【打印】开始发送打印数据");
+        Log.d(TAG, "开始发送打印数据");
         try {
             if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0] == null) {
-                Log.e(TAG, "【打印】打印机管理器未初始化");
                 throw new Exception("打印机管理器未初始化");
             }
             
             if (!DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].getConnState()) {
-                Log.e(TAG, "【打印】打印机未连接");
                 throw new Exception("打印机未连接");
             }
             
-            Log.d(TAG, "【打印】发送打印数据到打印机，数据大小: " + (datas != null ? datas.size() : 0));
+            Log.d(TAG, "发送打印数据到打印机");
             DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].sendDataImmediately(datas);
-            Log.d(TAG, "【打印】打印数据发送成功");
+            Log.d(TAG, "打印数据发送成功");
             
             callback.onPrintSuccess();
-            Log.d(TAG, "【打印】打印回调成功");
+            Log.d(TAG, "打印回调成功");
             
             runOnUiThread(() -> {
                 loadData();
                 Toast.makeText(this, "打印成功", Toast.LENGTH_SHORT).show();
             });
         } catch (Exception e) {
-            Log.e(TAG, "【打印】发送打印数据失败", e);
+            Log.e(TAG, "发送打印数据失败", e);
             throw new Exception("发送打印数据失败: " + e.getMessage());
         }
     }
@@ -1014,14 +871,12 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     // USB 连接方法
     private void usbConn(UsbDevice usbDevice) {
         try {
-            Log.d(TAG, "【打印机】开始连接USB打印机: " + usbDevice.getDeviceName());
+            Log.d(TAG, "开始连接USB打印机: " + usbDevice.getDeviceName());
             // 关闭之前的连接
             if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id] != null) {
-                Log.d(TAG, "【打印机】关闭之前的连接");
                 DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].closePort(id);
             }
             
-            Log.d(TAG, "【打印机】创建新的打印机连接");
             new DeviceConnFactoryManager.Build()
                     .setId(id)
                     .setConnMethod(DeviceConnFactoryManager.CONN_METHOD.USB)
@@ -1029,14 +884,11 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
                     .setContext(this)
                     .build();
             
-            Log.d(TAG, "【打印机】尝试打开端口");
+            // 直接调用openPort，不检查返回值
             DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].openPort();
             
             // 检查连接状态
-            boolean isConnected = DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].getConnState();
-            Log.d(TAG, "【打印机】USB打印机连接状态: " + (isConnected ? "成功" : "失败"));
-            
-            if (isConnected) {
+            if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].getConnState()) {
                 // 保存打印机信息
                 SharedPreferences sp = getSharedPreferences("printer_cache", MODE_PRIVATE);
                 sp.edit()
@@ -1044,15 +896,15 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
                     .putString("printer_address", usbDevice.getDeviceName())
                     .apply();
                     
-                Log.d(TAG, "【打印机】USB打印机连接成功");
+                Log.d(TAG, "USB打印机连接成功");
                 isPrinterConnected = true;
                 showToast("USB打印机连接成功");
             } else {
-                Log.e(TAG, "【打印机】USB打印机连接失败");
+                Log.e(TAG, "USB打印机连接失败");
                 showToast("USB打印机连接失败");
             }
         } catch (Exception e) {
-            Log.e(TAG, "【打印机】USB打印机连接异常: " + e.getMessage(), e);
+            Log.e(TAG, "USB打印机连接异常: " + e.getMessage(), e);
             showToast("USB打印机连接异常: " + e.getMessage());
         } finally {
             updatePrinterInfo();
@@ -1313,7 +1165,7 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        Log.e(TAG, "【回调】onActivityResult: requestCode=" + requestCode + ", resultCode=" + resultCode + ", data=" + (data != null));
+        Log.d(TAG, "onActivityResult: requestCode=" + requestCode + ", resultCode=" + resultCode);
         if (requestCode == 1001 && resultCode == RESULT_OK) {
             Log.d(TAG, "从部门选择页面返回，更新部门显示");
             isFromDepartmentSelection = true;  // 标记是从部门选择返回
@@ -1324,27 +1176,17 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
                     nxDepContainer = findViewById(R.id.nx_dep_container);
                     gbDepContainer = findViewById(R.id.gb_dep_container);
                 }
+                
                 // 更新部门显示
                 updateDepartmentDisplay();
+                
                 // 重新加载数据
                 loadData();
+                
                 Log.d(TAG, "部门显示和数据更新完成");
             } catch (Exception e) {
                 Log.e(TAG, "更新部门显示失败", e);
                 showToast("更新部门显示失败: " + e.getMessage());
-            }
-        } else if (requestCode == REQUEST_SCALE_ACTIVITY && resultCode == RESULT_OK) {
-            Log.e(TAG, "【蓝牙称】onActivityResult收到蓝牙称连接成功回调");
-            if (data != null && data.hasExtra("weight")) {
-                double weight = data.getDoubleExtra("weight", 0.0);
-                Log.e(TAG, "【蓝牙称】收到重量: " + weight);
-                // 如果当前显示的是商品对话框，将重量传递给对话框
-                if (currentDialog != null && currentDialog instanceof StockOutGoodsDialog) {
-                    Log.e(TAG, "【蓝牙称】将重量传递给StockOutGoodsDialog");
-                    ((StockOutGoodsDialog) currentDialog).onActivityResult(requestCode, resultCode, data);
-                }
-            } else {
-                Log.e(TAG, "【蓝牙称】data为null或没有weight字段");
             }
         }
     }
@@ -1382,10 +1224,6 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
                 autoConnectPrinter();
                 startPrinterMonitor();
             }, 1000);
-            
-            loadScaleCache();
-            autoConnectScale();
-            updateScaleInfo();
             
             Log.d(TAG, "onResume执行完成");
         } catch (Exception e) {
@@ -1489,45 +1327,34 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     }
 
     private void searchAndConnectPrinter() {
-        Log.d(TAG, "【打印机】开始搜索可用打印机");
+        Log.d(TAG, "开始搜索可用打印机");
         try {
             // 首先尝试USB打印机
             UsbManager usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
             if (usbManager != null) {
-                Log.d(TAG, "【打印机】获取到USB服务");
                 HashMap<String, UsbDevice> deviceList = usbManager.getDeviceList();
                 if (deviceList != null && !deviceList.isEmpty()) {
-                    Log.d(TAG, "【打印机】发现USB设备数量: " + deviceList.size());
                     for (UsbDevice device : deviceList.values()) {
-                        Log.d(TAG, "【打印机】检查USB设备: vendorId=" + device.getVendorId() + 
-                            ", productId=" + device.getProductId() + 
-                            ", deviceName=" + device.getDeviceName());
                         if (device.getVendorId() == 26728 && device.getProductId() == 1280) {
-                            Log.d(TAG, "【打印机】找到匹配的USB打印机");
+                            Log.d(TAG, "找到USB打印机，尝试连接");
                             if (usbManager.hasPermission(device)) {
-                                Log.d(TAG, "【打印机】已有USB权限，开始连接");
                                 usbConn(device);
                                 return;
                             } else {
-                                Log.d(TAG, "【打印机】请求USB权限");
                                 usbManager.requestPermission(device, mPermissionIntent);
                                 return;
                             }
                         }
                     }
-                } else {
-                    Log.d(TAG, "【打印机】未检测到USB设备");
                 }
-            } else {
-                Log.e(TAG, "【打印机】无法获取USB服务");
             }
 
             // 如果没有找到USB打印机，更新打印机状态
-            Log.d(TAG, "【打印机】未找到USB打印机");
+            Log.d(TAG, "未找到USB打印机");
             updatePrinterStatus(false);
             showToast("未找到可用打印机");
         } catch (Exception e) {
-            Log.e(TAG, "【打印机】搜索打印机失败", e);
+            Log.e(TAG, "搜索打印机失败", e);
             showToast("搜索打印机失败: " + e.getMessage());
         }
     }
@@ -1565,7 +1392,6 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
             BluetoothDevice device;
             try {
                 device = bluetoothAdapter.getRemoteDevice(address);
-                Log.d(TAG, "获取到蓝牙设备: " + device.getName());
             } catch (IllegalArgumentException e) {
                 Log.e(TAG, "无效的蓝牙地址: " + address);
                 showToast("无效的蓝牙地址");
@@ -1579,40 +1405,37 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
             }
 
             // 检查设备是否已配对
-            if (device.getBondState() != BluetoothDevice.BOND_BONDED) {
-                Log.d(TAG, "设备未配对，尝试配对");
-                try {
-                    device.createBond();
-                    // 等待配对完成
-                    Thread.sleep(2000);
-                } catch (Exception e) {
-                    Log.e(TAG, "设备配对失败", e);
-                    showToast("设备配对失败");
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) 
+                        != PackageManager.PERMISSION_GRANTED) {
                     return;
                 }
             }
-
-            // 关闭之前的连接
-            if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0] != null) {
-                DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].closePort(0);
+            
+            if (device.getBondState() != BluetoothDevice.BOND_BONDED) {
+                Log.e(TAG, "设备未配对");
+                showToast("请先配对设备");
+                return;
             }
 
-            // 建立新的蓝牙连接
-            Log.d(TAG, "开始建立蓝牙连接");
+            // 关闭之前的连接
+            if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id] != null) {
+                DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].closePort(id);
+            }
+
+            // 建立新的连接
             new DeviceConnFactoryManager.Build()
-                    .setId(0)
+                    .setId(id)
                     .setConnMethod(DeviceConnFactoryManager.CONN_METHOD.BLUETOOTH)
                     .setMacAddress(address)
                     .setContext(this)
                     .build();
 
             // 打开端口
-            DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].openPort();
+            DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].openPort();
             
             // 检查连接状态
-            boolean connected = DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].getConnState();
-            Log.d(TAG, "蓝牙连接结果: " + (connected ? "成功" : "失败"));
-
+            boolean connected = DeviceConnFactoryManager.getDeviceConnFactoryManagers()[id].getConnState();
             if (connected) {
                 Log.d(TAG, "蓝牙打印机连接成功");
                 isPrinterConnected = true;
@@ -1717,205 +1540,4 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
             }
         }
     }
-
-    private void showStockOutDialog(NxDistributerGoodsShelfGoodsEntity goods) {
-        Log.d(TAG, "显示出库对话框，商品: " + goods.getNxDistributerGoodsEntity().getNxDgGoodsName());
-        Log.d(TAG, "订单数据: " + (goods.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities() != null ? 
-            "数量=" + goods.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities().size() : "null"));
-        
-        if (currentDialog != null) {
-            currentDialog.dismiss();
-        }
-        StockOutGoodsDialog dialog = new StockOutGoodsDialog(this, goods);
-        dialog.setOnConfirmListener(orders -> {
-            // 处理确认事件
-            if (orders != null && !orders.isEmpty()) {
-                // === 新增：同步订单重量到主页面数据源 ===
-                for (NxDepartmentOrdersEntity updatedOrder : orders) {
-                    for (NxDistributerGoodsShelfEntity shelf : shelfEntities) {
-                        for (NxDistributerGoodsShelfGoodsEntity g : shelf.getNxDisGoodsShelfGoodsEntities()) {
-                            List<NxDepartmentOrdersEntity> orderList = g.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities();
-                            for (NxDepartmentOrdersEntity order : orderList) {
-                                if (order.getNxDepartmentOrdersId().equals(updatedOrder.getNxDepartmentOrdersId())) {
-                                    Log.d(TAG, "同步订单重量: orderId=" + order.getNxDepartmentOrdersId() + ", oldWeight=" + order.getNxDoWeight() + ", newWeight=" + updatedOrder.getNxDoWeight());
-                                    order.setNxDoWeight(updatedOrder.getNxDoWeight());
-                                }
-                            }
-                        }
-                    }
-                }
-                // 刷新主页面适配器
-                updateGoodsList();
-                goodsAdapter.notifyDataSetChanged();
-                // === 原有打印和保存逻辑 ===
-                printAndSaveOrders(orders, 0);
-            }
-        });
-        currentDialog = dialog;
-        dialog.show();
-    }
-
-    private void updateShelfTabs() {
-        if (shelfAdapter != null) {
-            shelfAdapter.setData(shelfEntities);
-            shelfAdapter.setSelectedPosition(currentShelfIndex);
-        }
-    }
-
-    private void updateGoodsList() {
-        if (shelfEntities != null && !shelfEntities.isEmpty() && currentShelfIndex < shelfEntities.size()) {
-            List<NxDistributerGoodsShelfGoodsEntity> goodsList = 
-                shelfEntities.get(currentShelfIndex).getNxDisGoodsShelfGoodsEntities();
-            if (goodsAdapter != null) {
-                goodsAdapter.setGoodsList(goodsList);
-            }
-        }
-    }
-
-    private void updateShelfSelection() {
-        if (shelfAdapter != null) {
-            shelfAdapter.setSelectedPosition(currentShelfIndex);
-        }
-    }
-
-    private void loadScaleCache() {
-        SharedPreferences sp = getSharedPreferences("scale_cache", MODE_PRIVATE);
-        scaleAddress = sp.getString("scale_address", null);
-        scaleName = sp.getString("scale_name", null);
-        isScaleConnected = scaleAddress != null;
-        Log.d(TAG, "[蓝牙秤] loadScaleCache: scaleAddress=" + scaleAddress + ", scaleName=" + scaleName + ", isScaleConnected=" + isScaleConnected);
-    }
-
-    private void updateScaleInfo() {
-        Log.d(TAG, "[蓝牙秤] updateScaleInfo: isScaleConnected=" + isScaleConnected + ", scaleAddress=" + scaleAddress + ", scaleName=" + scaleName);
-        if (tvScaleInfo != null) {
-            if (isScaleConnected) {
-                tvScaleInfo.setText("蓝牙秤: 已连接\n名称: " + (scaleName != null ? scaleName : "") + "\n地址: " + scaleAddress);
-                tvScaleInfo.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
-            } else {
-                tvScaleInfo.setText("蓝牙秤: 未连接");
-                tvScaleInfo.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
-            }
-        }
-    }
-
-    private void autoConnectScale() {
-        Log.d(TAG, "[蓝牙秤] autoConnectScale: scaleAddress=" + scaleAddress + ", bluetoothAdapter=" + bluetoothAdapter + ", isEnabled=" + (bluetoothAdapter != null && bluetoothAdapter.isEnabled()));
-        if (scaleAddress == null) return;
-        if (bluetoothAdapter == null) bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled()) {
-            isScaleConnected = false;
-            updateScaleInfo();
-            return;
-        }
-        try {
-            BluetoothDevice device = bluetoothAdapter.getRemoteDevice(scaleAddress);
-            if (device != null) {
-                isScaleConnected = true;
-            } else {
-                isScaleConnected = false;
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "[蓝牙秤] autoConnectScale异常: " + e.getMessage());
-            isScaleConnected = false;
-        }
-        updateScaleInfo();
-    }
-
-    private void showConnectScaleDialog() {
-        Log.e(TAG, "【用户操作】点击了连接蓝牙称按钮，弹出连接蓝牙称对话框");
-        ConnectScaleDialog dialog = new ConnectScaleDialog(this);
-        dialog.setOnConnectListener((address, name) -> {
-            Log.e(TAG, "【回调】蓝牙秤连接成功，address=" + address + ", name=" + name);
-            loadScaleCache();
-            updateScaleInfo();
-            // 自动打印
-            if (!isBluetoothPrinterConnected()) {
-                Log.e(TAG, "【打印】蓝牙打印机未连接，无法自动打印");
-                showPrinterNotConnectedDialog();
-            } else {
-                Log.e(TAG, "【打印】蓝牙打印机已连接，自动打印成功消息");
-                printSuccessMessage();
-            }
-        });
-        dialog.show();
-    }
-
-    public void showToast(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
-    }
-
-    private boolean isBluetoothScaleConnected() {
-        // TODO: Implement logic to check if Bluetooth scale is connected
-        Log.d(TAG, "检查蓝牙称连接状态");
-        return false; // Placeholder
-    }
-
-    private boolean isBluetoothPrinterConnected() {
-        Log.d(TAG, "检查蓝牙打印机连接状态");
-        try {
-            DeviceConnFactoryManager manager = DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0];
-            if (manager != null
-                    && manager.getConnMethod() == DeviceConnFactoryManager.CONN_METHOD.BLUETOOTH
-                    && manager.getConnState()) {
-                Log.d(TAG, "蓝牙打印机已连接");
-                return true;
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "检查蓝牙打印机连接状态异常", e);
-        }
-        Log.d(TAG, "蓝牙打印机未连接");
-        return false;
-    }
-
-    private void printSuccessMessage() {
-        Log.d(TAG, "尝试打印成功消息");
-        try {
-            DeviceConnFactoryManager manager = DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0];
-            if (manager == null || !manager.getConnState()) {
-                Log.e(TAG, "打印机未连接，无法打印");
-                showToast("打印机未连接，无法打印");
-                return;
-            }
-            PrinterCommand commandType = manager.getCurrentPrinterCommand();
-            Vector<Byte> datas = new Vector<>();
-            if (commandType == PrinterCommand.ESC) {
-                EscCommand esc = new EscCommand();
-                esc.addInitializePrinter();
-                esc.addSelectJustification(EscCommand.JUSTIFICATION.CENTER);
-                esc.addText("蓝牙秤连接成功\n");
-                esc.addCutPaper();
-                datas = esc.getCommand();
-            } else if (commandType == PrinterCommand.TSC) {
-                LabelCommand tsc = new LabelCommand();
-                tsc.addSize(50, 30);
-                tsc.addGap(2);
-                tsc.addDirection(LabelCommand.DIRECTION.FORWARD, LabelCommand.MIRROR.NORMAL);
-                tsc.addReference(0, 0);
-                tsc.addCls();
-                tsc.addText(20, 20, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, LabelCommand.ROTATION.ROTATION_0,
-                        LabelCommand.FONTMUL.MUL_2, LabelCommand.FONTMUL.MUL_2, "蓝牙秤连接成功");
-                tsc.addPrint(1, 1);
-                datas = tsc.getCommand();
-            } else {
-                Log.e(TAG, "不支持的打印机指令集");
-                showToast("不支持的打印机指令集");
-                return;
-            }
-            manager.sendDataImmediately(datas);
-            showToast("已发送打印命令");
-        } catch (Exception e) {
-            Log.e(TAG, "打印成功消息异常", e);
-            showToast("打印失败: " + e.getMessage());
-        }
-    }
-
-    private void showPrinterNotConnectedDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("打印机未连接");
-        builder.setMessage("请确保打印机已连接并开启。");
-        builder.setPositiveButton("确定", (dialog, which) -> dialog.dismiss());
-        builder.show();
-    }
 }
-

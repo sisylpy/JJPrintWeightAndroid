@@ -21,6 +21,15 @@
             android:textSize="20sp"
             android:textStyle="bold" />
 
+        <TextView
+            android:id="@+id/tv_scale_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="蓝牙秤: 未连接"
+            android:textColor="@android:color/holo_green_dark"
+            android:padding="8dp"
+            android:textSize="16sp"/>
+
 <!--        <TextView-->
 <!--            android:layout_width="match_parent"-->
 <!--            android:layout_height="wrap_content"-->
@@ -34,12 +43,12 @@
     <FrameLayout
         android:id="@+id/list_container"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_height="wrap_content"
         android:minHeight="200dp"
         android:maxHeight="400dp">
         android:layout_gravity="center">
 
-        <android.support.v7.widget.RecyclerView
+        <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_orders"
             android:layout_width="match_parent"
             android:layout_height="match_parent"

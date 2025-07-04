@@ -79,7 +79,23 @@ public class NxDistributerGoodsShelfGoodsEntity implements Serializable{
 
     public NxDistributerGoodsEntity nxDistributerGoodsEntity;
 
+    private String nxDoWeight;
 
+    public String getNxDoWeight() {
+        return nxDoWeight;
+    }
 
-   
+    public void setNxDoWeight(double weight) {
+        this.nxDoWeight = String.valueOf(weight);
+    }
+
+    private List<NxDepartmentOrdersEntity> nxDepartmentOrdersEntities;
+
+    public List<NxDepartmentOrdersEntity> getNxDepartmentOrdersEntities() {
+        return nxDepartmentOrdersEntities;
+    }
+
+    public void setNxDepartmentOrdersEntities(List<NxDepartmentOrdersEntity> nxDepartmentOrdersEntities) {
+        this.nxDepartmentOrdersEntities = nxDepartmentOrdersEntities;
+    }
 }
