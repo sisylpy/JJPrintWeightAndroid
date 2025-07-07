@@ -88,7 +88,20 @@ public class ConnectScaleDialog extends Dialog {
         rvDevices.setLayoutManager(new LinearLayoutManager(getContext()));
         deviceAdapter = new DeviceAdapter(deviceList);
         rvDevices.setAdapter(deviceAdapter);
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        
+        // 检查蓝牙权限后初始化适配器
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) 
+                    != PackageManager.PERMISSION_GRANTED) {
+                Log.w(TAG, "缺少蓝牙连接权限，无法初始化蓝牙适配器");
+                bluetoothAdapter = null;
+            } else {
+                bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+            }
+        } else {
+            // API 30及以下版本，蓝牙权限在安装时自动授予
+            bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        }
         btnScan.setOnClickListener(v -> {
             Log.d(TAG, "btnScan clicked, isScanning=" + isScanning);
             if (!isScanning) {
@@ -147,8 +160,19 @@ public class ConnectScaleDialog extends Dialog {
             Toast.makeText(getContext(), "请授予蓝牙相关权限后再试", Toast.LENGTH_SHORT).show();
             return;
         }
+        // 权限检查后再初始化
         if (bluetoothAdapter == null) {
-            bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT)
+                        != PackageManager.PERMISSION_GRANTED) {
+                    Log.w(TAG, "缺少蓝牙连接权限，无法初始化蓝牙适配器");
+                    bluetoothAdapter = null;
+                } else {
+                    bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+                }
+            } else {
+                bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+            }
         }
         if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled()) {
             Log.w(TAG, "蓝牙未打开或适配器为null");
@@ -204,7 +228,17 @@ public class ConnectScaleDialog extends Dialog {
             }
         } else {
             Log.d(TAG, "经典蓝牙扫描停止");
-            bluetoothAdapter.cancelDiscovery();
+            // stopScan前也要加权限检查
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT)
+                        != PackageManager.PERMISSION_GRANTED) {
+                    Log.w(TAG, "缺少蓝牙连接权限，无法取消经典蓝牙扫描");
+                    return;
+                }
+            }
+            if (bluetoothAdapter != null) {
+                bluetoothAdapter.cancelDiscovery();
+            }
         }
     }
 

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F8FAFC">
+
+    <!-- 顶部栏 -->
+    <RelativeLayout
+        android:id="@+id/topbar"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="@android:color/white"
+        android:elevation="2dp">
+
+        <!-- 左侧头像 -->
+        <ImageView
+            android:id="@+id/iv_avatar"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_centerVertical="true"
+            android:layout_marginStart="16dp"
+            android:src="@android:drawable/ic_menu_myplaces"
+            android:contentDescription="头像"/>
+
+        <!-- 中间标题 -->
+        <TextView
+            android:id="@+id/tv_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:text="出库模式: 无设备"
+            android:textSize="18sp"
+            android:textColor="@android:color/black"
+            android:textStyle="bold"/>
+
+        <!-- 右侧设置按钮 -->
+        <ImageButton
+            android:id="@+id/btn_settings"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:layout_marginEnd="16dp"
+            android:src="@android:drawable/ic_menu_manage"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="设置"/>
+
+    </RelativeLayout>
+
+    <!-- 主体内容 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <!-- 左侧货架列表 -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_shelf"
+            android:layout_width="72dp"
+            android:layout_height="match_parent"
+            android:background="#E6F4EA"
+            android:scrollbars="vertical"/>
+
+        <!-- 右侧商品详情 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <!-- 商品列表 -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_goods"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/white"
+                android:scrollbars="vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout> 

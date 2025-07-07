@@ -1,33 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:background="@android:color/white">
 
-    <!-- 内容区域 -->
-    <FrameLayout
-        android:id="@+id/content_container"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
-
-        <!-- 部门列表 -->
+    <!-- 只读部门列表 -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_departments"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="8dp" />
 
-        <!-- 无数据提示 -->
+    <!-- 暂无数据提示 -->
         <TextView
             android:id="@+id/tv_no_data"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="暂无部门数据"
-            android:textSize="16sp"
+        android:text="暂无数据"
             android:gravity="center"
             android:padding="16dp"
-            android:visibility="gone"/>
-
-    </FrameLayout>
+        android:visibility="gone" />
 
 </LinearLayout> 

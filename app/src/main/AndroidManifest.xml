@@ -57,27 +57,25 @@
             android:theme="@style/AppTheme">
         </activity>
 
-        <activity android:exported="true" android:name=".main.LoginActivity"
+        <activity android:name=".main.CustomerListActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme.NoActionBar">
+        </activity>
+
+        <activity android:name=".main.CustomerStockOutActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme.NoActionBar">
+        </activity>
+
+        <activity android:name=".main.LoginActivity"
+            android:exported="true"
             android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
         </activity>
-        <activity android:name=".PrinterActivity"/>
 
-        <activity android:name=".main.recycler.MainOneActivity" />
-        <activity android:name=".main.recycler.MainTwoActivity" />
-
-        <activity android:name=".main.gp.UsbListAcitivity"
-            android:configChanges="keyboardHidden|orientation|screenSize"
-            android:label="@string/usb_devices_list"
-            android:theme="@android:style/Theme.Dialog" />
-
-        <activity android:name=".main.gp.GpActivity">
-
-        </activity>
 
         <activity android:name=".main.SettingsActivity"
             android:label="设置"
@@ -90,6 +88,8 @@
         <activity android:name=".main.ScaleActivity"
             android:label="蓝牙称"
             android:theme="@style/AppTheme"/>
+
+        <activity android:name=".main.DepOutOrderActivity" />
 
     </application>
 

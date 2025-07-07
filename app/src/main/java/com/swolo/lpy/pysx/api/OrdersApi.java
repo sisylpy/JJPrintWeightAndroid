@@ -29,6 +29,11 @@ public interface OrdersApi {
                                           @Field("orderWeight") String orderWeight);
 
 
+    @FormUrlEncoded
+    @POST("api/nxdepartmentorders/stockerGetWaitStockGoodsDeps")
+    Observable<CommonResponse> stockerGetWaitStockGoodsDeps(@Field("disId") int disId);
+
+
 
 
 

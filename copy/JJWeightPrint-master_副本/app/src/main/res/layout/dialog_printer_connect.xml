@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@color/white">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="选择打印机连接方式"
+        android:textSize="18sp"
+        android:textColor="#333333"
+        android:gravity="center"
+        android:layout_marginBottom="16dp"/>
+
+    <Button
+        android:id="@+id/btn_usb_connect"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="USB连接"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btn_bluetooth_connect"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="蓝牙连接"/>
+
+</LinearLayout> 

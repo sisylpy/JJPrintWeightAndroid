@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/order_item_bg"
+    android:layout_marginTop="4dp"
+    android:padding="10dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tv_department_info"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_gray"
+            android:textSize="13sp"
+            android:maxLines="1"
+            android:ellipsize="end"/>
+
+        <TextView
+            android:id="@+id/tv_order_quantity"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:textColor="@color/text_gray"
+            android:textSize="13sp"/>
+
+        <TextView
+            android:id="@+id/tv_out_quantity"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="13sp"/>
+
+        <CheckBox
+            android:id="@+id/cb_check"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:layout_marginRight="8dp"
+            android:focusable="false"
+            android:focusableInTouchMode="false"/>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tv_remark"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textColor="@color/text_danger"
+        android:textSize="12sp"
+        android:visibility="gone"/>
+
+    <TextView
+        android:id="@+id/tv_pick_detail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textColor="@color/text_danger"
+        android:textSize="12sp"
+        android:visibility="gone"/>
+
+</LinearLayout> 

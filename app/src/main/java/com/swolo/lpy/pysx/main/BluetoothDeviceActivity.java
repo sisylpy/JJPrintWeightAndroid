@@ -24,6 +24,7 @@ import android.widget.Toast;
 import com.swolo.lpy.pysx.R;
 import com.swolo.lpy.pysx.main.adapter.BluetoothDeviceListAdapter;
 import com.swolo.lpy.pysx.main.bean.BluetoothParameter;
+
 import com.printer.command.LabelCommand;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -52,6 +53,7 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
     private Button btnSearch;
     private boolean mIsSearching = false;
     private String mSelectedMacAddress;
+    private String deviceType = "printer"; // 默认连接打印机
 
     private final BroadcastReceiver mFindBlueToothReceiver = new BroadcastReceiver() {
         @Override
@@ -163,11 +165,19 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_bluetooth);
 
+        // 获取设备类型
+        deviceType = getIntent().getStringExtra("device_type");
+        if (deviceType == null) {
+            deviceType = "printer"; // 默认为打印机
+        }
+        Log.d(TAG, "设备类型: " + deviceType);
+
         // 设置ActionBar的返回按钮
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             getSupportActionBar().setDisplayShowHomeEnabled(true);
-            getSupportActionBar().setTitle("蓝牙设备");
+            String title = "scale".equals(deviceType) ? "选择蓝牙称" : "选择蓝牙设备";
+            getSupportActionBar().setTitle(title);
         }
         
         initView();
@@ -206,6 +216,8 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
                 startSearch();
             }
         });
+
+
     }
 
     private void initBluetooth() {
@@ -543,6 +555,17 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
                 Log.d(TAG, "准备发送打印数据");
                 DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].sendDataImmediately(datas);
                 Log.d(TAG, "数据发送成功");
+                
+                // 保存打印机配置到缓存
+                if (mSelectedMacAddress != null) {
+                    android.content.SharedPreferences sp = getSharedPreferences("printer_cache", MODE_PRIVATE);
+                    sp.edit()
+                        .putString("printer_type", "bluetooth")
+                        .putString("printer_address", mSelectedMacAddress)
+                        .apply();
+                    Log.d(TAG, "打印机配置已保存到缓存");
+                }
+                
                 Toast.makeText(this, "测试小票打印成功", Toast.LENGTH_SHORT).show();
             } catch (Exception e) {
                 Log.e(TAG, "发送数据失败", e);
@@ -551,6 +574,94 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
         } catch (Exception e) {
             Log.e(TAG, "打印测试小票失败", e);
             Toast.makeText(this, "打印测试小票失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void printScaleTestReceipt(String scaleName) {
+        Log.d(TAG, "开始打印称连接测试小票");
+        try {
+            // 检查权限
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) 
+                        != PackageManager.PERMISSION_GRANTED) {
+                    Log.e(TAG, "缺少蓝牙连接权限");
+                    return;
+                }
+            }
+
+            // 检查是否有已配置的打印机
+            android.content.SharedPreferences sp = getSharedPreferences("printer_cache", MODE_PRIVATE);
+            String printerAddress = sp.getString("printer_address", null);
+            
+            if (printerAddress == null || printerAddress.isEmpty()) {
+                Log.d(TAG, "没有已配置的打印机，跳过打印");
+                return;
+            }
+            if (printerAddress == null || printerAddress.isEmpty()) {
+                Log.d(TAG, "打印机地址为空，跳过打印");
+                return;
+            }
+
+            Log.d(TAG, "使用已配置的打印机打印，MAC地址: " + printerAddress);
+            try {
+                // 关闭之前的连接
+                if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0] != null) {
+                    DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].closePort(0);
+                }
+
+                // 建立新的蓝牙连接
+                new DeviceConnFactoryManager.Build()
+                        .setId(0)
+                        .setConnMethod(DeviceConnFactoryManager.CONN_METHOD.BLUETOOTH)
+                        .setMacAddress(printerAddress)
+                        .setContext(this)
+                        .build();
+                DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].openPort();
+                Log.d(TAG, "打印机管理器初始化成功");
+            } catch (Exception e) {
+                Log.e(TAG, "打印机管理器初始化失败", e);
+                return;
+            }
+
+            // 检查打印机状态
+            if (!DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].getConnState()) {
+                Log.e(TAG, "打印机未连接");
+                return;
+            }
+
+            Log.d(TAG, "创建LabelCommand对象");
+            LabelCommand tsc = new LabelCommand();
+            tsc.addSize(40, 30); // 设置标签大小
+            tsc.addGap(2); // 设置标签间隙
+            tsc.addCls(); // 清除缓冲区
+            tsc.addDirection(LabelCommand.DIRECTION.FORWARD, LabelCommand.MIRROR.NORMAL); // 设置打印方向
+            tsc.addReference(0, 0); // 设置参考点
+            tsc.addHome(); // 设置打印位置
+            tsc.addDensity(LabelCommand.DENSITY.DNESITY4); // 设置打印浓度
+
+            // 添加文本
+            tsc.addText(50, 50, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, LabelCommand.ROTATION.ROTATION_0, LabelCommand.FONTMUL.MUL_1, LabelCommand.FONTMUL.MUL_1, "称连接测试");
+            tsc.addText(50, 100, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, LabelCommand.ROTATION.ROTATION_0, LabelCommand.FONTMUL.MUL_1, LabelCommand.FONTMUL.MUL_1, "蓝牙称连接成功");
+            tsc.addText(50, 150, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, LabelCommand.ROTATION.ROTATION_0, LabelCommand.FONTMUL.MUL_1, LabelCommand.FONTMUL.MUL_1, "时间: " + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date()));
+            tsc.addText(50, 200, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, LabelCommand.ROTATION.ROTATION_0, LabelCommand.FONTMUL.MUL_1, LabelCommand.FONTMUL.MUL_1, "称名称: " + scaleName);
+            tsc.addText(50, 250, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, LabelCommand.ROTATION.ROTATION_0, LabelCommand.FONTMUL.MUL_1, LabelCommand.FONTMUL.MUL_1, "称连接测试成功！");
+
+            tsc.addPrint(1, 1); // 设置打印份数
+            tsc.addSound(2, 100); // 设置蜂鸣器
+            tsc.addCashdrwer(LabelCommand.FOOT.F5, 255, 255); // 设置钱箱
+            
+            Log.d(TAG, "获取打印命令数据");
+            Vector<Byte> datas = tsc.getCommand();
+            
+            try {
+                Log.d(TAG, "准备发送打印数据");
+                DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].sendDataImmediately(datas);
+                Log.d(TAG, "称连接测试小票打印成功");
+            } catch (Exception e) {
+                Log.e(TAG, "发送数据失败", e);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "打印称连接测试小票失败", e);
         }
     }
 
@@ -577,6 +688,48 @@ public class BluetoothDeviceActivity extends AppCompatActivity {
 
         Log.d(TAG, "连接到设备: " + parameter.getBluetoothName());
         mSelectedMacAddress = parameter.getBluetoothMac();
-        printTestReceipt();
+        
+        if ("scale".equals(deviceType)) {
+            // 连接蓝牙称
+            Log.d(TAG, "连接蓝牙称: " + parameter.getBluetoothName());
+            
+            // 保存称配置到缓存
+            if (mSelectedMacAddress != null) {
+                android.content.SharedPreferences sp = getSharedPreferences("scale_cache", MODE_PRIVATE);
+                sp.edit()
+                    .putString("scale_address", mSelectedMacAddress)
+                    .putString("scale_name", parameter.getBluetoothName())
+                    .apply();
+                Log.d(TAG, "称配置已保存到缓存");
+            }
+            
+            // 设置返回结果
+            Intent resultIntent = new Intent();
+            resultIntent.putExtra("device_address", mSelectedMacAddress);
+            resultIntent.putExtra("device_name", parameter.getBluetoothName());
+            setResult(RESULT_OK, resultIntent);
+            
+            Toast.makeText(this, "蓝牙称连接成功: " + parameter.getBluetoothName(), Toast.LENGTH_SHORT).show();
+            
+            // 尝试用已配置的打印机打印测试小票
+            printScaleTestReceipt(parameter.getBluetoothName());
+            
+            finish();
+        } else {
+            // 连接打印机
+            Log.d(TAG, "连接蓝牙打印机: " + parameter.getBluetoothName());
+            
+            // 保存打印机配置到缓存
+            if (mSelectedMacAddress != null) {
+                android.content.SharedPreferences sp = getSharedPreferences("printer_cache", MODE_PRIVATE);
+                sp.edit()
+                    .putString("printer_type", "bluetooth")
+                    .putString("printer_address", mSelectedMacAddress)
+                    .apply();
+                Log.d(TAG, "打印机配置已保存到缓存");
+            }
+            
+            printTestReceipt();
+        }
     }
 } 

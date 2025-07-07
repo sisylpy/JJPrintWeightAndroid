@@ -40,6 +40,12 @@ public class LoginActivity extends BaseActivity implements MainContract.LoginVie
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // 隐藏自定义顶部栏（只对登录页生效）
+        View topbar = findViewById(R.id.topbar);
+        if (topbar != null) {
+            topbar.setVisibility(View.GONE);
+        }
+
         // 检查本地缓存
         SharedPreferences sp = getSharedPreferences("user_cache", MODE_PRIVATE);
         String userInfoJson = sp.getString("userInfo", null);
@@ -48,8 +54,8 @@ public class LoginActivity extends BaseActivity implements MainContract.LoginVie
         int distributerId = userInfoPrefs.getInt("distributer_id", -1);
 
         if (userInfoJson != null && disInfoJson != null && distributerId != -1) {
-            Log.d("LoginActivity", "检测到本地有缓存用户信息，自动跳转到出库页面");
-            Intent intent = new Intent(this, StockOutActivity.class);
+            Log.d("LoginActivity", "检测到本地有缓存用户信息，自动跳转到客户列表页面");
+            Intent intent = new Intent(this, CustomerListActivity.class);
             intent.putExtra("distributer_id", distributerId);
             startActivity(intent);
             finish();
@@ -59,10 +65,6 @@ public class LoginActivity extends BaseActivity implements MainContract.LoginVie
         Log.d("LoginActivity", "onCreate: LoginActivity created");
 
         loginPresenter = new LoginPresenterImpl(this);
-        ImageButton btnBack = findViewById(R.id.btn_back);
-        if (btnBack != null) {
-            btnBack.setVisibility(View.GONE);
-        }
         ImageButton btnSetting = findViewById(R.id.btn_settings);
         if (btnSetting != null) {
             btnSetting.setVisibility(View.GONE);
@@ -77,19 +79,8 @@ public class LoginActivity extends BaseActivity implements MainContract.LoginVie
     // 初始化视图
     @Override
     protected void initView() {
-        // 获取内容容器
-        View contentContainer = findViewById(R.id.content_container);
-        if (contentContainer == null) {
-            throw new RuntimeException("找不到内容容器");
-        }
-
-        // 加载登录布局
-        View loginLayout = getLayoutInflater().inflate(R.layout.activity_login, (ViewGroup) contentContainer, false);
-        ((ViewGroup) contentContainer).addView(loginLayout);
-
-        // 从登录布局中查找视图
-        etPhoneNumber = loginLayout.findViewById(R.id.et_phone_number);
-        btnLogin = loginLayout.findViewById(R.id.btn_login);
+        etPhoneNumber = findViewById(R.id.et_phone_number);
+        btnLogin = findViewById(R.id.btn_login);
         Log.d("LoginActivity", "initView: View initialized");
     }
 
@@ -113,16 +104,23 @@ public class LoginActivity extends BaseActivity implements MainContract.LoginVie
         // 添加手机号输入监听
         etPhoneNumber.addTextChangedListener(new android.text.TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                Log.d("LoginActivity", "beforeTextChanged: " + s);
+            }
 
             @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                Log.d("LoginActivity", "onTextChanged: " + s);
+            }
 
             @Override
             public void afterTextChanged(android.text.Editable s) {
+                Log.d("LoginActivity", "afterTextChanged: " + s);
                 if (s.length() == 11) {
-                    btnLogin.setBackgroundColor(getResources().getColor(android.R.color.holo_green_light));
+                    btnLogin.setEnabled(true);
+                    btnLogin.setBackgroundResource(R.drawable.rounded_orange_btn);
                 } else {
+                    btnLogin.setEnabled(false);
                     btnLogin.setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
                 }
             }
@@ -131,11 +129,17 @@ public class LoginActivity extends BaseActivity implements MainContract.LoginVie
         btnLogin.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Log.d("LoginActivity", "btnLogin clicked");
                 String phoneNumber = etPhoneNumber.getText().toString().trim();
                 Log.d("LoginActivity", "点击登录，手机号: " + phoneNumber);
                 if (phoneNumber.isEmpty()) {
                     Toast.makeText(LoginActivity.this, "请输入手机号", Toast.LENGTH_SHORT).show();
+                } else if (phoneNumber.length() != 11) {
+                    Toast.makeText(LoginActivity.this, "请输入11位手机号", Toast.LENGTH_SHORT).show();
                 } else {
+                    // 显示加载状态
+                    btnLogin.setEnabled(false);
+                    btnLogin.setText("登录中...");
                     loginPresenter.login(phoneNumber);
                 }
             }
@@ -148,6 +152,10 @@ public class LoginActivity extends BaseActivity implements MainContract.LoginVie
     public void onLoginSuccess(Object data) {
         Log.d("LoginActivity", "onLoginSuccess: 登录成功, data=" + data);
         Toast.makeText(this, "登录成功", Toast.LENGTH_SHORT).show();
+        
+        // 恢复按钮状态
+        btnLogin.setEnabled(true);
+        btnLogin.setText("立即登录");
 
         if (data instanceof Map) {
             Map dataMap = (Map) data;
@@ -196,8 +204,8 @@ public class LoginActivity extends BaseActivity implements MainContract.LoginVie
                     .apply();
                 Log.d("LoginActivity", "userInfo和disInfo已缓存到本地");
 
-                // 3. 跳转到出库页面
-                Intent intent = new Intent(this, StockOutActivity.class);
+                // 3. 跳转到客户列表页面
+                Intent intent = new Intent(this, CustomerListActivity.class);
                 intent.putExtra("distributer_id", userInfo.getNxDiuDistributerId());
                 startActivity(intent);
                 finish();
@@ -212,5 +220,9 @@ public class LoginActivity extends BaseActivity implements MainContract.LoginVie
     public void onLoginFail(String error) {
         Log.d("LoginActivity", "onLoginFail: 登录失败, error=" + error);
         Toast.makeText(this, "登录失败: " + error, Toast.LENGTH_SHORT).show();
+        
+        // 恢复按钮状态
+        btnLogin.setEnabled(true);
+        btnLogin.setText("立即登录");
     }
 } 

@@ -7,6 +7,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.ImageButton;
 import android.util.Log;
+import android.text.SpannableString;
 
 import com.swolo.lpy.pysx.R;
 import com.swolo.lpy.pysx.main.modal.GbDepartmentEntity;
@@ -129,10 +130,10 @@ public class StockOutGoodsAdapter extends RecyclerView.Adapter<StockOutGoodsAdap
         holder.ordersContainer.removeAllViews();
 
         // 添加订单信息
-        List<NxDepartmentOrdersEntity> orders = goods.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities();
-        if (orders != null && !orders.isEmpty()) {
-            Log.d("StockOutGoodsAdapter", "添加订单信息，订单数量: " + orders.size());
-            for (NxDepartmentOrdersEntity order : orders) {
+        List<NxDepartmentOrdersEntity> orderList = goods.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities();
+        if (orderList != null && !orderList.isEmpty()) {
+            Log.d("StockOutGoodsAdapter", "添加订单信息，订单数量: " + orderList.size());
+            for (NxDepartmentOrdersEntity order : orderList) {
                 Log.d("StockOutGoodsAdapter", "订单详情: " +
                     "部门=" + (order.getNxDepartmentEntity() != null ? 
                         order.getNxDepartmentEntity().getNxDepartmentName() : "null") +
@@ -157,9 +158,18 @@ public class StockOutGoodsAdapter extends RecyclerView.Adapter<StockOutGoodsAdap
 
         // 设置蓝牙秤按钮点击事件
         holder.btnScale.setOnClickListener(v -> {
+            Log.d("StockOutGoodsAdapter", "[按钮] ========== 蓝牙秤按钮点击开始 ==========");
+            Log.d("StockOutGoodsAdapter", "[按钮] 点击的商品: " + goods.getNxDistributerGoodsEntity().getNxDgGoodsName());
+            Log.d("StockOutGoodsAdapter", "[按钮] scaleButtonClickListener: " + (scaleButtonClickListener != null ? "不为空" : "为空"));
+            
             if (scaleButtonClickListener != null) {
+                Log.d("StockOutGoodsAdapter", "[按钮] 调用scaleButtonClickListener.onScaleButtonClick");
                 scaleButtonClickListener.onScaleButtonClick(goods);
+                Log.d("StockOutGoodsAdapter", "[按钮] scaleButtonClickListener.onScaleButtonClick调用完成");
+            } else {
+                Log.e("StockOutGoodsAdapter", "[按钮] scaleButtonClickListener为空，无法处理点击事件");
             }
+            Log.d("StockOutGoodsAdapter", "[按钮] ========== 蓝牙秤按钮点击结束 ==========");
         });
 
         // 设置选中状态
@@ -172,59 +182,36 @@ public class StockOutGoodsAdapter extends RecyclerView.Adapter<StockOutGoodsAdap
         TextView orderQuantity = orderView.findViewById(R.id.tv_order_quantity);
         TextView remark = orderView.findViewById(R.id.tv_remark);
 
-        // 设置部门名称
+        // 设置客户名，只显示部门名称，不显示简称
+        String customerName = "";
         if (order != null) {
             if (order.getNxDepartmentEntity() != null) {
                 NxDepartmentEntity department = order.getNxDepartmentEntity();
                 if (department.getFatherDepartmentEntity() != null) {
-                    departmentName.setText(String.format("(%s)%s.%s",
-                            department.getFatherDepartmentEntity().getNxDepartmentPickName(),
-                            department.getFatherDepartmentEntity().getNxDepartmentName(),
-                            department.getNxDepartmentName()));
+                    customerName = department.getFatherDepartmentEntity().getNxDepartmentName();
                 } else {
-                    departmentName.setText(String.format("(%s)%s",
-                            department.getNxDepartmentPickName(),
-                            department.getNxDepartmentName()));
+                    customerName = department.getNxDepartmentName();
                 }
             } else if (order.getGbDepartmentEntity() != null) {
                 GbDepartmentEntity department = order.getGbDepartmentEntity();
                 if (department.getFatherGbDepartmentEntity() != null && 
                     department.getFatherGbDepartmentEntity().getGbDepartmentSubAmount() > 1) {
-                        departmentName.setText(String.format("(%s)%s.%s",
-                            department.getFatherGbDepartmentEntity().getGbDepartmentAttrName(),
-                            department.getFatherGbDepartmentEntity().getGbDepartmentName(),
-                            department.getGbDepartmentName()));
+                    customerName = department.getFatherGbDepartmentEntity().getGbDepartmentName();
                 } else {
-                    departmentName.setText(String.format("(%s)%s",
-                            department.getGbDepartmentAttrName(),
-                            department.getGbDepartmentName()));
+                    customerName = department.getGbDepartmentName();
                 }
             }
-        } else {
-            departmentName.setText("");
         }
+        departmentName.setText(customerName);
 
-        // 设置订单数量和出库数量
-        String orderText = String.format("订货: %s%s",
-                order.getNxDoQuantity(),
-                order.getNxDoStandard());
+        // 设置数量和单位，全部为绿色，不显示"订"字
+        String quantity = String.valueOf(order.getNxDoQuantity()) + (order.getNxDoStandard() == null ? "" : order.getNxDoStandard());
+        SpannableString spannable = new SpannableString(quantity);
+        spannable.setSpan(new android.text.style.ForegroundColorSpan(0xFF20B384), 0, quantity.length(), SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE);
+        orderQuantity.setText(spannable);
 
-        // 添加出库数量显示
-        if (order.getNxDoWeight() != null && !order.getNxDoWeight().isEmpty()) {
-            orderText += String.format("  出库: %s%s",
-                    order.getNxDoWeight(),
-                    goods.getNxDistributerGoodsEntity().getNxDgGoodsStandardname());
-        }
-
-        orderQuantity.setText(orderText);
-
-        // 设置备注
-        if (order.getNxDoRemark() != null && !order.getNxDoRemark().isEmpty()) {
-            remark.setVisibility(View.VISIBLE);
-            remark.setText(order.getNxDoRemark());
-        } else {
-            remark.setVisibility(View.GONE);
-        }
+        // 隐藏备注
+        remark.setVisibility(View.GONE);
 
         return orderView;
     }
@@ -259,7 +246,9 @@ public class StockOutGoodsAdapter extends RecyclerView.Adapter<StockOutGoodsAdap
     private OnScaleButtonClickListener scaleButtonClickListener;
 
     public void setOnScaleButtonClickListener(OnScaleButtonClickListener listener) {
+        Log.d("StockOutGoodsAdapter", "[监听器] setOnScaleButtonClickListener: listener=" + (listener != null ? "不为空" : "为空"));
         this.scaleButtonClickListener = listener;
+        Log.d("StockOutGoodsAdapter", "[监听器] scaleButtonClickListener设置完成");
     }
 }
 

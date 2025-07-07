@@ -193,6 +193,8 @@ public class NxDepartmentOrdersEntity implements Serializable{
 
     public Boolean purSelected = true;
 
+    public String indexStr;
+
     public Integer getNxCommunityFatherGoodsId() {
         return nxCommunityFatherGoodsId;
     }

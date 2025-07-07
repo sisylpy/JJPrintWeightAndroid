@@ -1,64 +1,96 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="#F5F5F5">
+    android:background="@android:color/white">
 
-    <!-- 顶部标题栏 -->
-    <LinearLayout
+    <!-- 顶部栏 -->
+    <RelativeLayout
+        android:id="@+id/topbar"
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:orientation="horizontal"
-        android:background="#3F51B5"
-        android:gravity="center_vertical"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp">
+        android:layout_height="56dp"
+        android:background="@android:color/white"
+        android:elevation="2dp">
 
-        <ImageButton
-            android:id="@+id/btn_back"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:src="@android:drawable/ic_menu_close_clear_cancel"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="#FFFFFF"
-            android:padding="8dp"/>
+        <!-- 左侧头像 -->
+        <ImageView
+            android:id="@+id/iv_avatar"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_centerVertical="true"
+            android:layout_marginStart="16dp"
+            android:src="@drawable/ic_launcher_foreground"
+            android:scaleType="centerCrop"
+            android:background="@drawable/background_corner"
+            android:contentDescription="头像" />
 
-        <ImageButton
-            android:id="@+id/btn_settings"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:src="@drawable/ic_settings_white"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="#FFFFFF"
-            android:padding="8dp"/>
-
+        <!-- 中间标题 -->
         <TextView
             android:id="@+id/tv_title"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="#FFFFFF"
-            android:textSize="18sp"
-            android:gravity="center"/>
-
-        <ImageButton
-            android:id="@+id/btn_right"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:src="@drawable/ic_department"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="#FFFFFF"
-            android:padding="8dp"/>
+            android:layout_centerInParent="true"
+            android:text="标题"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#222222" />
 
-    </LinearLayout>
+        <!-- 右侧第一个按钮（更多） -->
+        <ImageButton
+            android:id="@+id/btn_more"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_centerVertical="true"
+            android:layout_alignParentEnd="true"
+            android:layout_marginEnd="16dp"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_more_vert_24"
+            android:contentDescription="更多" />
 
-    <!-- 内容区域 -->
+        <!-- 右侧第二个按钮（圆形按钮） -->
+        <ImageButton
+            android:id="@+id/btn_circle"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_centerVertical="true"
+            android:layout_toStartOf="@id/btn_more"
+            android:layout_marginEnd="8dp"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_person_24"
+            android:contentDescription="圆形按钮" />
+
+        <!-- 右侧系统设置按钮（临时） -->
+        <ImageButton
+            android:id="@+id/btn_settings"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_centerVertical="true"
+            android:layout_toStartOf="@id/btn_more"
+            android:layout_marginEnd="8dp"
+            android:background="@android:color/transparent"
+            android:src="@android:drawable/ic_menu_manage"
+            android:contentDescription="设置" />
+
+        <!-- 右侧更多按钮（临时） -->
+        <ImageButton
+            android:id="@+id/btn_right"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_centerVertical="true"
+            android:layout_toStartOf="@id/btn_settings"
+            android:layout_marginEnd="8dp"
+            android:background="@android:color/transparent"
+            android:src="@android:drawable/ic_menu_more"
+            android:contentDescription="更多" />
+    </RelativeLayout>
+
+    <!-- 内容区 -->
     <FrameLayout
         android:id="@+id/content_container"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:padding="16dp"/>
+        android:layout_height="0dp"
+        android:layout_weight="1" />
 
 </LinearLayout> 

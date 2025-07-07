@@ -1,11 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/order_item_container"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:padding="12dp"
     android:gravity="center_vertical"
     android:background="@drawable/order_item_bg">
+
+    <!-- 选中指示器 -->
+    <LinearLayout
+        android:id="@+id/selected_indicator"
+        android:layout_width="4dp"
+        android:layout_height="match_parent"
+        android:background="@color/colorPrimary"
+        android:visibility="gone"
+        android:layout_marginEnd="8dp"/>
 
     <LinearLayout
         android:layout_width="0dp"
@@ -17,14 +27,15 @@
             android:id="@+id/tv_department_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/text_gray"
-            android:textSize="16sp"/>
+            android:textColor="#222222"
+            android:textStyle="bold"
+            android:textSize="18sp"/>
 
         <TextView
             android:id="@+id/tv_order_quantity"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/text_gray"
+            android:textColor="#3fc1ab"
             android:textSize="16sp"
             android:layout_marginTop="4dp"/>
 
@@ -46,20 +57,30 @@
 
         <EditText
             android:id="@+id/et_out_quantity"
-            android:layout_width="120dp"
-            android:layout_height="wrap_content"
-            android:inputType="numberDecimal"
+            android:layout_width="80dp"
+            android:layout_height="40dp"
+            android:inputType="number"
             android:background="@drawable/edit_text_bg"
             android:padding="8dp"
             android:textSize="16sp"
-            android:hint="输入数量"/>
+            android:hint="输入数量"
+            android:gravity="center_vertical|end"/>
 
         <TextView
             android:id="@+id/tv_unit"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            android:textColor="@color/text_gray"
+            android:textColor="#3fc1ab"
             android:textSize="16sp"/>
+
+        <ImageButton
+            android:id="@+id/btn_scale"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="8dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_edit"
+            android:contentDescription="蓝牙秤"/>
     </LinearLayout>
 </LinearLayout> 

@@ -27,11 +27,11 @@ public class DepartmentListPresenterImpl implements MainContract.DepartmentListP
 
     @Override
     public void getDepartmentList(Integer disId, Integer goodsType) {
-        Log.d(TAG, "开始获取部门列表: disId=" + disId + ", goodsType=" + goodsType);
+        Log.d(TAG, "开始获取部门列表: disId=" + disId);
         
         HttpManager.getInstance()
             .getApi(GoodsApi.class)
-            .disGetWaitStockGoodsDeps(disId, goodsType)
+            .stockerGetFinishStockGoodsDeps(disId)
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe(response -> {

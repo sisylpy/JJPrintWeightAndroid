@@ -1,0 +1,136 @@
+<view class="flex flex-column font-xl">
+  <back-navbar style="height: {{navBarHeight}}rpx;" title="出库商品" avatar="/images/back-gray.png" button-text="设置" bindnavbuttontap="toBack"></back-navbar>
+
+  <view class="flex-column ">
+
+    <view class='navbar border-bottom p-20 bg-white'>
+      <block wx:for="{{tabs}}" wx:key="index">
+        <view id="{{index}}" class="navbar-item {{swipeIndex == index?'bar-item-on':''}}" data-current='{{index}}' bindtap='onTab1Click'>
+          <view class='navbar-title'>
+            <text>{{item.name}}</text>
+            <text class="mainColor">({{item.amount}}个)</text>
+          </view>
+
+        </view>
+      </block>
+      <view class="navbar-slider" style="left: {{sliderLeft}}px; width:{{windowWidth / 2}}rpx; transform: translateX({{sliderOffset}}px); -webkit-transform: translateX({{sliderOffset}}px);">
+      </view>
+    </view>
+
+    <swiper style="height: {{windowHeight - 200 - navBarHeight}}rpx; " current="{{currentTab}}" wx:key="currentTab" bindchange="bindChange">
+
+      <!-- Part-1 -->
+      
+      <swiper-item>
+
+        <view class=" {{cataArr.length == 0  ? 'show' : 'hide'}}" style="height: {{windowHeight - 460}}rpx;padding-top: 200rpx; text-align:center; ">
+          <view class="font-lg  empty_view">
+            没有未拣货订单
+          </view>
+        </view>
+
+        <scroll-view scroll-y="true" style="height: {{windowHeight -  200 - navBarHeight}}rpx;">
+          <view class="flex-column" wx:for="{{cataArr}}" wx:for-item="greatGrand" wx:key="nxDistributerFatherGoodsId">
+            <view class="flex-column mt-10" wx:for="{{greatGrand.fatherGoodsEntities}}" wx:for-item="grand" wx:key="nxDistributerFatherGoodsId">
+              <view class="flex-row font-md">
+                <text class="p-10">{{grand.nxDfgFatherGoodsName}}</text>
+              </view>
+
+              <view class="flex-column font-lg">
+                <view class="flex-row" wx:for="{{grand.nxDistributerPurchaseGoodsEntities}}" wx:for-item="purGoods" wx:for-index="goodsIndex" wx:key="nxDistributerPurchaseGoodsId">
+                  <view class="flex-row  bg-white p-10 border-bottom" wx:for="{{purGoods.nxDepartmentOrdersEntities}}" wx:for-item="orders" style="width: {{windowWidth - 20}}rpx;" catchtap="toInputOrder" data-item="{{orders}}" data-goods="{{purGoods.nxDistributerGoodsEntity}}" wx:key="nxDepartmentOrdersId">
+                    <view class="flex-row third-row">
+                      <text class="m-10">{{goodsIndex + 1}}.</text>
+                      <text class="m-10">{{purGoods.nxDistributerGoodsEntity.nxDgGoodsName}}</text>
+                    </view>
+                    <view class="third-row">
+                      <text>订:{{orders.nxDoQuantity}}{{orders.nxDoStandard}}</text>
+                    </view>
+                    <view class="">
+                      <text class="gray">出货:</text>
+                      <text wx:if="{{orders.nxDoWeight != null}}">{{orders.nxDoWeight}}{{purGoods.nxDistributerGoodsEntity.nxDgGoodsStandardname}}</text>
+                    </view>
+
+                  </view>
+
+                </view>
+              </view>
+
+
+            </view>
+
+          </view>
+          <view class="center-content text-secondary font-sm" style="height: 100rpx;">
+            没有数据啦!
+          </view>
+        </scroll-view>
+
+
+      </swiper-item>
+      <swiper-item>
+
+        <!--  top -->
+        <view class="{{cataArr.length == 0  ? 'show' : 'hide'}}" style="height: {{windowHeight - 460}}rpx; padding-top: 200rpx; text-align:center; ">
+          <view class="font-lg  ">
+            没有已拣货订单
+          </view>
+        </view>
+        <scroll-view scroll-y="true" style="height: {{windowHeight -  200 - navBarHeight}}rpx; ">
+          <view class="flex-column" wx:for="{{cataArr}}" wx:for-item="greatGrand" wx:key="nxDistributerFatherGoodsId">
+            <view class="flex-column mt-10" wx:for="{{greatGrand.fatherGoodsEntities}}" wx:for-item="grand" wx:key="nxDistributerFatherGoodsId">
+              <view class="flex-row text-secondary font-md">
+                <text class="p-10">{{grand.nxDfgFatherGoodsName}}</text>
+              </view>
+
+              <view class="flex-column">
+
+                <view class="flex-row" wx:for="{{grand.nxDistributerPurchaseGoodsEntities}}" wx:for-item="purGoods" wx:for-index="goodsIndex" wx:key="nxDistributerPurchaseGoodsId">
+                  <view class="flex-row-between  border-bottom bg-white p-20 font-md" wx:for="{{purGoods.nxDepartmentOrdersEntities}}" wx:for-item="orders" style="width: {{windowWidth - 40}}rpx;" wx:key="nxDepartmentOrdersId">
+                    <view class="flex-row" catchtap="toInputOrder" data-item="{{orders}}" data-goods="{{purGoods.nxDistributerGoodsEntity}}" style="width: {{windowWidth - 140}}rpx; ">
+                      <view class="flex-row third-row">
+                        <text class="m-10">{{goodsIndex + 1}}.</text>
+                        <text class="m-10">{{purGoods.nxDistributerGoodsEntity.nxDgGoodsName}}</text>
+                      </view>
+                      <view class="third-row">
+                        <text>订:{{orders.nxDoQuantity}}{{orders.nxDoStandard}}</text>
+                      </view>
+                      <view class="">
+                        <text class="gray">出货:</text>
+                        <text>{{orders.nxDoWeight}}{{purGoods.nxDistributerGoodsEntity.nxDgGoodsStandardname}}</text>
+                      </view>
+                    </view>
+
+                    <view class="button-container" bindtap="{{gbDepFatherId !== '-1' ?  'cancleGbOrderSx' : 'cancleOutOrder'}}" data-item="{{orders}}" data-id="{{orders.nxDepartmentOrdersId}}">
+                      <image src="/images/del-6.png" mode="aspectFill" class="icon" />
+                    </view>
+
+
+                  </view>
+
+                </view>
+              </view>
+
+
+            </view>
+
+          </view>
+          <view class="center-content text-secondary font-md" style="height: 100rpx;">
+            没有数据啦!
+          </view>
+        </scroll-view>
+
+
+      </swiper-item>
+
+
+    </swiper>
+
+
+
+
+  </view>
+</view>
+
+
+
+<editWeight show="{{showInputOrder}}" bindconfirm="confirm" bindcancle="cancle" bindfinish="finishGbPurGoods" item="{{item}}" maskHeight="{{maskHeight > windowHeight ? maskHeight : windowHeight}}" scrollViewTop="{{scrollViewTop}}" scaleInput="{{scaleInput}}" windowHeight="{{windowHeight}}" windowWidth="{{windowWidth}}" url="{{url}}" />

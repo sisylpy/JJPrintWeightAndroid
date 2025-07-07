@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@android:color/white"
+    android:padding="16dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?android:attr/selectableItemBackground">
+
+    <!-- 商品基本信息 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="8dp">
+
+        <!-- 品牌标签 -->
+        <TextView
+            android:id="@+id/tv_brand"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="品牌"
+            android:textSize="12sp"
+            android:textColor="@android:color/holo_blue_dark"
+            android:background="@android:color/holo_blue_light"
+            android:padding="4dp"
+            android:layout_marginEnd="8dp"
+            android:visibility="gone"/>
+
+        <!-- 商品名称 -->
+        <TextView
+            android:id="@+id/tv_goods_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="商品名称"
+            android:textSize="16sp"
+            android:textColor="@android:color/black"
+            android:textStyle="bold"/>
+
+        <!-- 商品规格 -->
+        <TextView
+            android:id="@+id/tv_goods_spec"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="规格"
+            android:textSize="12sp"
+            android:textColor="@android:color/darker_gray"/>
+
+    </LinearLayout>
+
+    <!-- 订单列表 -->
+    <LinearLayout
+        android:id="@+id/ll_orders"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- 订单项模板 -->
+        <LinearLayout
+            android:id="@+id/order_item_template"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="8dp"
+            android:background="@android:color/darker_gray"
+            android:layout_marginBottom="4dp"
+            android:visibility="gone">
+
+            <!-- 客户信息行 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="4dp">
+
+                <!-- 客户名称 -->
+                <TextView
+                    android:id="@+id/tv_customer_name"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="客户名称"
+                    android:textSize="14sp"
+                    android:textColor="@android:color/black"/>
+
+                <!-- 订单数量 -->
+                <TextView
+                    android:id="@+id/tv_order_quantity"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="订: 0"
+                    android:textSize="12sp"
+                    android:textColor="@android:color/darker_gray"
+                    android:layout_marginStart="8dp"/>
+
+                <!-- 出库重量 -->
+                <TextView
+                    android:id="@+id/tv_stock_weight"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="出: 0"
+                    android:textSize="12sp"
+                    android:textColor="@android:color/darker_gray"
+                    android:layout_marginStart="8dp"/>
+
+            </LinearLayout>
+
+            <!-- 备注信息 -->
+            <TextView
+                android:id="@+id/tv_remark"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="备注信息"
+                android:textSize="12sp"
+                android:textColor="@android:color/holo_red_dark"
+                android:visibility="gone"/>
+
+            <!-- 拣货信息 -->
+            <TextView
+                android:id="@+id/tv_pick_detail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="拣货信息"
+                android:textSize="12sp"
+                android:textColor="@android:color/holo_red_dark"
+                android:visibility="gone"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout> 

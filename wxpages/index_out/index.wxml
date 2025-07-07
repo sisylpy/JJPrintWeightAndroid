@@ -1,0 +1,135 @@
+<view class="flex flex-column ">
+
+  <back-navbar style="height: {{navBarHeight}}rpx;" title="{{outNxDepNames}}" avatar="/images/back-gray.png" button-text="设置" bindnavbuttontap="toBack"></back-navbar>
+
+  <!-- 页面内容 -->
+  <view class="content flex-column">
+
+    
+
+    <!-- <block wx:if="{{outNxDepNames.length > 0}}">
+      <view class="center-content" id="nxDepIds">
+        <view class=" p-20 " style="display: flex; ">
+          <view class="filterMy" style="margin-left: 40rpx;">
+            <text class=" margin-right" wx:for="{{outNxDepNames}}">{{item}}</text>
+            <text>{{idDepOrdersWait}}</text>
+            <image src="/images/del-6.png" mode="aspectFill" class="delIcon" bindtap="delSearch" />
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <block wx:if="{{outGbDepNames.length > 0}}">
+      <view class="center-content" id="gbDepIds">
+        <view class=" p-20 " style="display: flex; ">
+          <view class="filterMy" style="margin-left: 40rpx;">
+            <text class=" margin-right" wx:for="{{outGbDepNames}}">{{item}}</text>
+            <text>{{idDepOrdersWait}}</text>
+            <image src="/images/del-6.png" mode="aspectFill" class="delIcon" bindtap="delSearch" />
+          </view>
+        </view>
+      </view>
+
+    </block> -->
+
+    <!--  top -->
+    <view class="flex-column-center  {{goodsList.length == 0  && shelfArr.length == 0 ? 'show' : 'hide'}}" style="height: {{windowHeight - 460}}rpx; ">
+      <view class="center-content flex-column" style="height: {{windowHeight - 460}}rpx; ">
+        <image src="/images/xiuxi.png" mode="aspectFill" class="empty_image" />
+        <text>暂无拣货商品1</text>
+      </view>
+    </view>
+
+    <view class="main" >
+        <scroll-view scroll-y="true"  style="width: {{leftMenuWidth}}rpx;" scroll-top="{{scrollTopLeft}}">
+        <view class="left-item {{selectedSub == leftIndex ? 'left-active' : ''}}" wx:key="nxDistributerFatherGoodsId" wx:for="{{shelfArr}}" wx:for-item="grand" bindtap="toScrollView" data-index="{{leftIndex}}" wx:for-index="leftIndex">
+          <text>{{grand.nxDistributerGoodsShelfName}}</text>
+        </view>
+        <view style="height: 100rpx;"></view>
+      </scroll-view>
+      <view class="flex-1" style="padding-left: 20rpx;">
+        <scroll-view scroll-y="true" class="scroll-content" scroll-into-view="{{toView}}" scroll-top="0" bindscroll="scrollToShelf" scroll-with-animation style="height:  {{contentHeight}}rpx;  ">
+          <view class="{{selectedSub == index ? 'left-active' : ''}}" wx:for="{{shelfArr}}" wx:for-item="grand" id="position{{index}}" wx:key="nxDistributerGoodsShelfId">
+            <view class="flex flex-row p-20 " wx:for="{{grand.nxDisGoodsShelfGoodsEntities}}" wx:for-item="sons">
+              <view class="flex-column out_goods flex-1" bindtap="showIsOutShelf" data-item="{{sons}}" hover-class="hover">
+                <view class="flex flex-row">
+                  <text class="brand" wx:if="{{sons.nxDistributerGoodsEntity.nxDgGoodsBrand !== 'null' && sons.nxDistributerGoodsEntity.nxDgGoodsBrand.length > 0}}">{{sons.nxDistributerGoodsEntity.nxDgGoodsBrand}}</text>
+                  <text class="font-lg-2 five-weight">{{sons.nxDistributerGoodsEntity.nxDgGoodsName}}</text>
+                  <block wx:if="{{sons.nxDistributerGoodsEntity.nxDgGoodsStandardWeight !== 'null' && sons.nxDistributerGoodsEntity.nxDgGoodsStandardWeight.length > 0}}">
+                    <text wx:if="{{sons.nxDistributerGoodsEntity.nxDgGoodsStandardname !== '斤'}}">({{sons.nxDistributerGoodsEntity.nxDgGoodsStandardname}}/{{sons.nxDistributerGoodsEntity.nxDgGoodsStandardWeight}})</text>
+                  </block>
+                  <block wx:else>
+                    <text wx:if="{{sons.nxDistributerGoodsEntity.nxDgGoodsStandardname !== '斤'}}">({{sons.nxDistributerGoodsEntity.nxDgGoodsStandardname}})</text>
+                  </block>
+                </view>
+                <view class="flex-column"  wx:for="{{sons.nxDistributerGoodsEntity.nxDepartmentOrdersEntities}}" wx:key="nxDepartmentOrdersId" wx:for-item="orders">
+                  <view class="flex flex-row">
+                    <block wx:if="{{orders.gbDepartmentEntity !== null}}">
+                      <view class="flex-row-wrap m-10 third-row ">
+                        <text wx:if="{{orders.gbDepartmentEntity.fatherGbDepartmentEntity.gbDepartmentSubAmount > 1}}">{{orders.gbDepartmentEntity.fatherGbDepartmentEntity.gbDepartmentName}}.</text>
+                        <text>{{orders.gbDepartmentEntity.gbDepartmentName}}</text>
+                      </view>
+                    </block>
+                    <block wx:if="{{orders.nxRestrauntEntity !== null}}">
+                      <view class="flex-row-wrap m-10 third-row">
+                        <text>{{orders.nxRestrauntEntity.nxRestrauntAttrName}}</text>
+                      </view>
+                    </block>
+                    <block wx:if="{{orders.nxDepartmentEntity !== null}}">
+                      <view class="flex-row-wrap m-10 third-row">
+                        <!-- <text class="" wx:if="{{orders.nxDepartmentEntity.fatherDepartmentEntity !== null}}">({{orders.nxDepartmentEntity.fatherDepartmentEntity.nxDepartmentAttrName}})</text>
+                        <text class="" wx:else="">({{orders.nxDepartmentEntity.nxDepartmentAttrName}})</text> -->
+                        <text class="" wx:if="{{orders.nxDepartmentEntity.fatherDepartmentEntity !== null}}">{{orders.nxDepartmentEntity.fatherDepartmentEntity.nxDepartmentName}}.</text>
+                        <text class="longword">{{orders.nxDepartmentEntity.nxDepartmentName}}</text>
+                      </view>
+                    </block>
+                    <view class="flex-row third-row">
+                      <text class="m-10">订:</text>
+                      <text>{{orders.nxDoQuantity}}{{orders.nxDoStandard}}</text>
+                    </view>
+                    <view class="flex-row third-row" wx:if="{{orders.nxDoWeight !== null}}">
+                      <text class="m-10">出:</text>
+                      <text>{{orders.nxDoWeight}}{{orders.nxDoPrintStandard}}</text>
+                    </view>
+                    <view class="flex-row third-row red" wx:else="">
+                      <text class="m-10">出:</text>
+                    </view>
+                  </view>
+                  <view class="flex-row text-danger pl-10" wx:if="{{orders.nxDoRemark !== null && orders.nxDoRemark.length > 0}}">
+                    <text class="mr-10 text-secondary">备注:</text>
+                    <text>{{orders.nxDoRemark}}</text>
+                  </view>
+                  <view class="flex-row text-danger pl-10" wx:if="{{orders.nxDepartmentDisGoodsEntity !== null}}">
+                    <text class="mr-10 text-secondary">拣货:</text>
+                    <text>{{orders.nxDepartmentDisGoodsEntity.nxDdgPickDetail}}</text>
+                  </view>
+                </view>
+              </view>
+            </view>
+          </view>
+          <view class="center-content text-secondary font-sm" style="height: 200rpx;">
+            没有数据啦!
+          </view>
+        </scroll-view>
+      </view>
+
+<view>
+
+</view>
+
+</view>
+
+  </view>
+
+  <!-- 选好客户，去出库按钮 -->
+  <view class="wx_part" wx:if="{{hasSelectedCustomer}}">
+    <view class="flex-column flex-column-center pb-10" bindtap="toStock">
+      <view class="pt-10 pb-10">选好客户，去出库</view>
+    </view>
+  </view>
+
+</view>
+
+
+
+<stockOutGoods show="{{showDisOutGoods}}" bindconfirm="confirm" bindconfirmSave="confirmSave" bindneednot="confirmNeedNotPurchse" bindcancle="cancle" item="{{item}}" bindgetFocus="getFocus" bindcancle="cancle" modalHeight="{{windowHeight > maskHeight ? windowHeight : maskHeight }}" scrollViewTop="{{scrollViewTop}}" modalContentHeight="{{modalContentHeight}}" windowHeight="{{windowHeight}}" windowWidth="{{windowWidth}}" ids="{{ids}}" />

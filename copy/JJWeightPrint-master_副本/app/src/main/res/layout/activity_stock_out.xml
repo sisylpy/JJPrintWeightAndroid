@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+
+
+    <!-- 打印机信息区域 -->
+<!--    <LinearLayout-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:orientation="horizontal"-->
+<!--        android:padding="8dp"-->
+<!--        android:gravity="center_vertical"-->
+<!--        android:background="#E0E0E0">-->
+
+<!--        <TextView-->
+<!--            android:id="@+id/tv_printer_info"-->
+<!--            android:layout_width="0dp"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_weight="1"-->
+<!--            android:textColor="#FF0000"-->
+<!--            android:textSize="12sp"/>-->
+
+<!--        <ImageButton-->
+<!--            android:id="@+id/btn_dep"-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:src="@drawable/ic_department"-->
+<!--            android:background="?attr/selectableItemBackgroundBorderless"-->
+<!--            android:padding="8dp"/>-->
+
+<!--    </LinearLayout>-->
+
+    <!-- 内销部门显示区域 -->
+    <LinearLayout
+        android:id="@+id/nx_dep_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="10dp"
+        android:background="#E0E0E0"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tv_nx_dep_names"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="16sp"
+            android:textColor="#333333"/>
+
+        <TextView
+            android:id="@+id/tv_nx_dep_orders"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="待出库订单"
+            android:textSize="16sp"
+            android:textColor="#333333"/>
+
+        <ImageButton
+            android:id="@+id/btn_clear_nx_dep"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_clear"
+            android:background="?attr/selectableItemBackgroundBorderless"/>
+
+    </LinearLayout>
+
+    <!-- 国标部门显示区域 -->
+    <LinearLayout
+        android:id="@+id/gb_dep_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="10dp"
+        android:background="#E0E0E0"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tv_gb_dep_names"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="16sp"
+            android:textColor="#333333"/>
+
+        <TextView
+            android:id="@+id/tv_gb_dep_orders"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="待出库订单"
+            android:textSize="16sp"
+            android:textColor="#333333"/>
+
+        <ImageButton
+            android:id="@+id/btn_clear_gb_dep"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_clear"
+            android:background="?attr/selectableItemBackgroundBorderless"/>
+
+    </LinearLayout>
+
+    <!-- 主要内容区域 -->
+    <LinearLayout
+        android:id="@+id/swipe_refresh_layout"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:padding="8dp">
+
+            <!-- 左侧菜单 -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/left_menu"
+                android:layout_width="60dp"
+                android:layout_height="match_parent"/>
+
+            <!-- 右侧商品列表 -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_stock_out"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginLeft="8dp"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:padding="4dp"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- 无数据提示 -->
+    <TextView
+        android:id="@+id/tv_no_data"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="暂无数据"
+        android:textSize="16sp"
+        android:gravity="center"
+        android:padding="16dp"
+        android:visibility="gone"/>
+
+    <TextView
+        android:id="@+id/tv_scale_info"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="蓝牙秤: 未连接"
+        android:textColor="@android:color/holo_red_dark"
+        android:padding="8dp"
+        android:textSize="16sp"/>
+
+    <Button
+        android:id="@+id/btn_connect_scale"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="连接蓝牙秤"
+        android:textSize="16sp"
+        android:layout_margin="8dp"/>
+
+</LinearLayout>

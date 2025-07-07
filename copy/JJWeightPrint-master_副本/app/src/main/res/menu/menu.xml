@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/list_view"
+        android:title="ListView效果">
+        <menu>
+            <item
+                android:id="@+id/list_view_vertical_standard"
+                android:title="垂直标准" />
+            <item
+                android:id="@+id/list_view_vertical_reverse"
+                android:title="垂直反向" />
+            <item
+                android:id="@+id/list_view_horizantal_standard"
+                android:title="水平标准" />
+            <item
+                android:id="@+id/list_view_horizantal_reverse"
+                android:title="水平反转" />
+        </menu>
+    </item>
+    <item
+        android:id="@+id/grid_view"
+        android:title="GridView效果">
+        <menu>
+            <item
+                android:id="@+id/grid_view_vertical_standard"
+                android:title="垂直标准" />
+            <item
+                android:id="@+id/grid_view_vertical_reverse"
+                android:title="垂直反向" />
+            <item
+                android:id="@+id/grid_view_horizantal_standard"
+                android:title="水平标准" />
+            <item
+                android:id="@+id/grid_view_horizantal_reverse"
+                android:title="水平反转" />
+        </menu>
+    </item>
+    <item
+        android:id="@+id/stagger_view"
+        android:title="Stagger效果">
+        <menu>
+            <item
+                android:id="@+id/stagger_view_vertical_standard"
+                android:title="垂直标准" />
+            <item
+                android:id="@+id/stagger_view_vertical_reverse"
+                android:title="垂直反向" />
+            <item
+                android:id="@+id/stagger_view_horizantal_standard"
+                android:title="水平标准" />
+            <item
+                android:id="@+id/stagger_view_horizantal_reverse"
+                android:title="水平反转" />
+        </menu>
+    </item>
+
+</menu>

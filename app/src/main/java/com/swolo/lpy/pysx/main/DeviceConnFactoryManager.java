@@ -97,6 +97,7 @@ public class DeviceConnFactoryManager {
      * CPCL指令查询打印机实时状态 打印机开盖状态
      */
     private static final int CPCL_STATE_COVER_OPEN = 0x02;
+
     private static final int READ_DATA = 10000;
     private static final String READ_DATA_CNT = "read_data_cnt";
     private static final String READ_BUFFER_ARRAY = "read_buffer_array";
@@ -124,7 +125,11 @@ public class DeviceConnFactoryManager {
      * TSC查询打印机状态指令
      */
     private byte[] tsc = {0x1b, '!', '?'};
+    /**
+     * CPCL查询打印机状态指令
+     */
     private byte[] cpcl = {0x1b, 0x68};
+
 
     private byte[] sendCommand;
     /**
@@ -225,6 +230,7 @@ public class DeviceConnFactoryManager {
                                 App.getContext().sendBroadcast(intent);
                             }
                         }
+
                     } else if (sendCommand == cpcl) {
                         if (currentPrinterCommand == null) {
                             currentPrinterCommand = PrinterCommand.CPCL;
