@@ -139,5 +139,14 @@
     <color name="item_selected_bg">#E6F9F4</color> <!-- 选中高亮淡绿色 -->
     <color name="input_border_green">#3fc1ab</color> <!-- 输入框绿色边框 -->
     <color name="input_border_gray">#d6d6d6</color> <!-- 输入框灰色边框 -->
+    
+    <!-- 现代化UI颜色 -->
+    <color name="success_green">#4CAF50</color> <!-- 成功绿色 -->
+    <color name="warning_orange">#FF9800</color> <!-- 警告橙色 -->
+    <color name="error_red">#F44336</color> <!-- 错误红色 -->
+    <color name="info_blue">#2196F3</color> <!-- 信息蓝色 -->
+    <color name="card_shadow">#20000000</color> <!-- 卡片阴影 -->
+    <color name="ripple_white">#40FFFFFF</color> <!-- 白色波纹 -->
+    <color name="ripple_black">#20000000</color> <!-- 黑色波纹 -->
 
 </resources>

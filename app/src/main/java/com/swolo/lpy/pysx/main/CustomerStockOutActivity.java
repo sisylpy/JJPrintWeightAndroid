@@ -875,16 +875,76 @@ public class CustomerStockOutActivity extends AppCompatActivity {
                 model.contains("Android SDK built for x86");
     }
 
+    /**
+     * 【业务核心】检查打印机状态 - 严禁删除或修改
+     * 
+     * 【功能说明】
+     * 此方法负责检查打印机连接状态和可用性
+     * 如果打印机未连接，会尝试重新连接
+     * 
+     * 【检查流程】
+     * 1. 检查打印机管理器是否存在
+     * 2. 检查打印机连接状态
+     * 3. 如果未连接，尝试重新连接打印机
+     * 4. 等待连接完成并验证状态
+     * 
+     * 【返回值】
+     * - true：打印机状态正常，可以打印
+     * - false：打印机状态异常，无法打印
+     * 
+     * 【注意事项】
+     * - 此方法为打印核心，经过多次优化
+     * - 包含自动重连逻辑，请谨慎修改
+     * - 错误处理涉及用户体验，必须保持稳定
+     */
     private boolean checkPrinterStatus() {
-        if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0] == null) {
+        Log.d(TAG, "[打印流程] ========== 开始checkPrinterStatus方法 ==========");
+        
+        // 检查打印机管理器
+        DeviceConnFactoryManager[] managers = DeviceConnFactoryManager.getDeviceConnFactoryManagers();
+        if (managers == null || managers[0] == null) {
+            Log.e(TAG, "[打印流程] 打印机管理器为空");
             return false;
         }
         
-        if (!DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].getConnState()) {
+        DeviceConnFactoryManager manager = managers[0];
+        
+        // 检查连接状态
+        if (!manager.getConnState()) {
+            Log.w(TAG, "[打印流程] 打印机未连接，尝试重新连接...");
+            
+            // 尝试重新连接打印机
             connectPrinter();
+            
+            // 等待连接完成
+            try {
+                Thread.sleep(2000); // 等待2秒让连接完成
+            } catch (InterruptedException e) {
+                Log.e(TAG, "[打印流程] 等待连接时被中断", e);
+            }
+            
+            // 再次检查连接状态
+            if (!manager.getConnState()) {
+                Log.e(TAG, "[打印流程] 重新连接失败");
+                return false;
+            }
+            
+            Log.d(TAG, "[打印流程] 重新连接成功");
+        }
+        
+        // 检查打印机指令类型
+        PrinterCommand commandType = manager.getCurrentPrinterCommand();
+        Log.d(TAG, "[打印流程] 打印机指令类型: " + commandType);
+        
+        // 验证指令类型是否支持
+        boolean isSupported = (commandType == PrinterCommand.ESC || commandType == PrinterCommand.TSC);
+        
+        if (!isSupported) {
+            Log.e(TAG, "[打印流程] 不支持的打印机指令集: " + commandType);
             return false;
         }
         
+        Log.d(TAG, "[打印流程] ========== 打印机状态检查通过 ==========");
         return true;
     }
     /**

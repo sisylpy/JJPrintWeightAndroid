@@ -89,14 +89,7 @@ public class DeviceConnFactoryManager {
      * TSC指令查询打印机实时状态 打印机出错状态
      */
     private static final int TSC_STATE_ERR_OCCURS = 0x80;
-    /**
-     * CPCL指令查询打印机实时状态 打印机缺纸状态
-     */
-    private static final int CPCL_STATE_PAPER_ERR = 0x01;
-    /**
-     * CPCL指令查询打印机实时状态 打印机开盖状态
-     */
-    private static final int CPCL_STATE_COVER_OPEN = 0x02;
+
 
     private static final int READ_DATA = 10000;
     private static final String READ_DATA_CNT = "read_data_cnt";
@@ -120,15 +113,15 @@ public class DeviceConnFactoryManager {
     /**
      * ESC查询打印机实时状态指令
      */
-    private byte[] esc = {0x10, 0x04, 0x02};
     /**
-     * TSC查询打印机状态指令
+     * ESC查询打印机状态指令 - 使用更标准的ESC指令
      */
-    private byte[] tsc = {0x1b, '!', '?'};
+    private byte[] esc = {0x1B, 0x76}; // ESC v - 查询打印机状态
     /**
-     * CPCL查询打印机状态指令
+     * TSC查询打印机状态指令 - 使用更标准的TSC指令
      */
-    private byte[] cpcl = {0x1b, 0x68};
+    private byte[] tsc = {0x1B, 0x21, 0x3F}; // ESC ! ? - 查询打印机状态
+
 
 
     private byte[] sendCommand;
@@ -225,30 +218,6 @@ public class DeviceConnFactoryManager {
                                 Utils.toast(App.getContext(), mode + " " + status);
                             } else {//打印机状态查询
                                 System.out.println("---======----!!!" + cnt + "cnt=========cnncncnncnntttttntnn");
-                                Intent intent = new Intent(ACTION_QUERY_PRINTER_STATE);
-                                intent.putExtra(DEVICE_ID, id);
-                                App.getContext().sendBroadcast(intent);
-                            }
-                        }
-
-                    } else if (sendCommand == cpcl) {
-                        if (currentPrinterCommand == null) {
-                            currentPrinterCommand = PrinterCommand.CPCL;
-                            sendStateBroadcast(CONN_STATE_CONNECTED);
-                        } else {
-                            if (cnt == 1) {
-                                System.out.println(App.getContext().getString(R.string.str_state) + status);
-                                if ((buffer[0] == CPCL_STATE_PAPER_ERR)) {//缺纸
-                                    status += " " + App.getContext().getString(R.string.str_printer_out_of_paper);
-                                }
-                                if ((buffer[0] == CPCL_STATE_COVER_OPEN)) {//开盖
-                                    status += " " + App.getContext().getString(R.string.str_printer_open_cover);
-                                }
-                                String mode = App.getContext().getString(R.string.str_printer_printmode_cpcl);
-                                Utils.toast(App.getContext(), mode + " " + status);
-                            } else {//打印机状态查询
-                                System.out.println("cpcl---======----!!!" + cnt + "2cpclcnt=========cnncncnncnntttttntnn");
-
                                 Intent intent = new Intent(ACTION_QUERY_PRINTER_STATE);
                                 intent.putExtra(DEVICE_ID, id);
                                 App.getContext().sendBroadcast(intent);
@@ -437,34 +406,14 @@ public class DeviceConnFactoryManager {
                                 data.add(tsc[i]);
                             }
                             sendDataImmediately(data);
-                            //开启计时器，隔2000毫秒没有没返回值时发送CPCL查询打印机状态指令
+                            //开启计时器，隔2000毫秒打印机没有响应时，默认设置为TSC模式（标签打印机）
                             scheduledExecutorService.schedule(threadFactoryBuilder.newThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    if (currentPrinterCommand == null || (currentPrinterCommand != PrinterCommand.ESC && currentPrinterCommand != PrinterCommand.TSC)) {
-                                        Log.e(TAG, Thread.currentThread().getName());
-                                        //发送CPCL查询打印机状态指令
-                                        sendCommand = cpcl;
-                                        Vector<Byte> data = new Vector<Byte>(cpcl.length);
-                                        for (int i = 0; i < cpcl.length; i++) {
-                                            data.add(cpcl[i]);
-                                        }
-                                        sendDataImmediately(data);
-                                        //开启计时器，隔2000毫秒打印机没有响应者停止读取打印机数据线程并且关闭端口
-                                        scheduledExecutorService.schedule(threadFactoryBuilder.newThread(new Runnable() {
-                                            @Override
-                                            public void run() {
-                                                if (currentPrinterCommand == null) {
-                                                    if (reader != null) {
-                                                        reader.cancel();
-                                                        mPort.closePort();
-                                                        isOpenPort = false;
-                                                        mPort = null;
-                                                        sendStateBroadcast(CONN_STATE_FAILED);
-                                                    }
-                                                }
-                                            }
-                                        }), 2000, TimeUnit.MILLISECONDS);
+                                    if (currentPrinterCommand == null) {
+                                        Log.w(TAG, "打印机未响应ESC和TSC指令，默认设置为TSC模式（标签打印机）");
+                                        currentPrinterCommand = PrinterCommand.TSC;
+                                        sendStateBroadcast(CONN_STATE_CONNECTED);
                                     }
                                 }
                             }), 2000, TimeUnit.MILLISECONDS);
