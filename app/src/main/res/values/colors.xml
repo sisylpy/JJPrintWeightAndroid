@@ -101,7 +101,6 @@
     <color name="powderblue">#B0E0E6</color><!--粉蓝色 -->
     <color name="lightsteelblue">#B0C4DE</color><!--亮钢兰色 -->
     <color name="paleturquoise">#AFEEEE</color><!--苍宝石绿 -->
-    <color name="greenyellow">#ADFF2F</color><!--黄绿色 -->
     <color name="lightblue">#ADD8E6</color><!--亮蓝色 -->
     <color name="darkgrey">#A9A9A9</color><!--暗灰色 -->
     <color name="brown">#A52A2A</color><!--褐色 -->
@@ -148,5 +147,23 @@
     <color name="card_shadow">#20000000</color> <!-- 卡片阴影 -->
     <color name="ripple_white">#40FFFFFF</color> <!-- 白色波纹 -->
     <color name="ripple_black">#20000000</color> <!-- 黑色波纹 -->
+    <color name="stockout_dialog_header">#23805a</color>
 
+    <!-- 新增的美化颜色 -->
+    <color name="background_light">#F5F5F5</color>
+    <color name="card_background">#FFFFFF</color>
+    <color name="group_card_background">#E3F2FD</color>
+    <color name="order_card_background">#FAFAFA</color>
+    
+    <color name="text_primary">#333333</color>
+    <!-- <color name="text_secondary">#666666</color> -->
+    <color name="text_hint">#999999</color>
+    
+    <color name="group_text_color">#1976D2</color>
+    <color name="goods_text_color">#4CAF50</color>
+    <color name="order_text_color">#FF9800</color>
+    <color name="delete_button_color">#FF5722</color>
+    
+    <color name="divider_color">#E0E0E0</color>
+    <color name="shadow_color">#20000000</color>
 </resources>

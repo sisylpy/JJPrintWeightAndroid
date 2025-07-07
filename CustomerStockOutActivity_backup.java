@@ -27,7 +27,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import android.content.DialogInterface;
-import android.widget.ImageButton;
 
 import com.swolo.lpy.pysx.R;
 import com.swolo.lpy.pysx.api.GoodsApi;
@@ -96,7 +95,6 @@ public class CustomerStockOutActivity extends AppCompatActivity {
     private TextView tvTitle; // 标题显示，包含模式状态信息
     private RecyclerView rvShelf; // 货架列表显示
     private RecyclerView rvGoods; // 商品列表显示
-    private ImageButton btnRight; // 右上角部门按钮
 
     // 【业务核心】数据管理 - 严禁删除或修改
     // 这些变量用于管理客户出库的核心业务数据
@@ -300,7 +298,6 @@ public class CustomerStockOutActivity extends AppCompatActivity {
         tvTitle = findViewById(R.id.tv_title);
         rvShelf = findViewById(R.id.rv_shelf);
         rvGoods = findViewById(R.id.rv_goods);
-        btnRight = findViewById(R.id.btn_right); // 初始化右上角部门按钮
         
         // 设置RecyclerView
         rvShelf.setLayoutManager(new LinearLayoutManager(this));
@@ -321,28 +318,13 @@ public class CustomerStockOutActivity extends AppCompatActivity {
             finish();
         });
         
-        // 设置按钮 - 已删除，改为部门按钮
-        // findViewById(R.id.btn_settings).setOnClickListener(v -> {
-        //     Log.d(TAG, "[事件] 点击设置按钮");
-        //     // 跳转到设置页面
-        //     Intent intent = new Intent(this, SettingsActivity.class);
-        //     startActivity(intent);
-        // });
-        
-        // 右上角部门按钮点击事件，跳转到DepartmentListActivity
-        if (btnRight != null) {
-            btnRight.setOnClickListener(v -> {
-                Log.d(TAG, "[事件] 点击右上角部门按钮，跳转DepartmentListActivity");
-                try {
-                    Intent intent = new Intent(this, DepartmentListActivity.class);
-                    intent.putExtra("disId", disId); // 传递分销商ID
-                    startActivityForResult(intent, 1001);
-                } catch (Exception e) {
-                    Log.e(TAG, "启动DepartmentListActivity失败", e);
-                    Toast.makeText(this, "启动部门列表页面失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                }
-            });
-        }
+        // 设置按钮
+        findViewById(R.id.btn_settings).setOnClickListener(v -> {
+            Log.d(TAG, "[事件] 点击设置按钮");
+            // 跳转到设置页面
+            Intent intent = new Intent(this, SettingsActivity.class);
+            startActivity(intent);
+        });
         
         Log.d(TAG, "[事件] 事件绑定完成");
     }

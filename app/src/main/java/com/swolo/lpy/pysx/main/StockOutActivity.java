@@ -326,47 +326,47 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
             }
 
             // 添加蓝牙称按钮
-            ImageButton btnScale = findViewById(R.id.btn_scale);
-            if (btnScale != null) {
-                btnScale.setOnClickListener(v -> {
-                    Log.d(TAG, "点击蓝牙称按钮，准备启动ScaleActivity");
-                    try {
-                        // 检查蓝牙权限
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) 
-                                    != PackageManager.PERMISSION_GRANTED) {
-                                Log.e(TAG, "缺少蓝牙连接权限");
-                                showToast("缺少蓝牙连接权限");
-                                ActivityCompat.requestPermissions(this, 
-                                    new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 
-                                    REQUEST_BLUETOOTH_CONNECT_PERMISSION);
-                                return;
-                            }
-                        }
-
-                        // 检查蓝牙是否开启
-                        if (bluetoothAdapter == null) {
-                            Log.e(TAG, "设备不支持蓝牙");
-                            showToast("设备不支持蓝牙");
-                            return;
-                        }
-
-                        if (!bluetoothAdapter.isEnabled()) {
-                            Log.d(TAG, "蓝牙未开启");
-                            showToast("请先开启蓝牙");
-                            return;
-                        }
-
-                        Log.d(TAG, "蓝牙状态正常，启动ScaleActivity");
-                        Intent intent = new Intent(this, ScaleActivity.class);
-                        startActivityForResult(intent, REQUEST_SCALE_ACTIVITY);
-                        Log.d(TAG, "ScaleActivity启动成功");
-                    } catch (Exception e) {
-                        Log.e(TAG, "启动ScaleActivity失败", e);
-                        showToast("启动蓝牙称页面失败: " + e.getMessage());
-                    }
-                });
-            }
+//            ImageButton btnScale = findViewById(R.id.btn_scale);
+//            if (btnScale != null) {
+//                btnScale.setOnClickListener(v -> {
+//                    Log.d(TAG, "点击蓝牙称按钮，准备启动ScaleActivity");
+//                    try {
+//                        // 检查蓝牙权限
+//                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+//                            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
+//                                    != PackageManager.PERMISSION_GRANTED) {
+//                                Log.e(TAG, "缺少蓝牙连接权限");
+//                                showToast("缺少蓝牙连接权限");
+//                                ActivityCompat.requestPermissions(this,
+//                                    new String[]{Manifest.permission.BLUETOOTH_CONNECT},
+//                                    REQUEST_BLUETOOTH_CONNECT_PERMISSION);
+//                                return;
+//                            }
+//                        }
+//
+//                        // 检查蓝牙是否开启
+//                        if (bluetoothAdapter == null) {
+//                            Log.e(TAG, "设备不支持蓝牙");
+//                            showToast("设备不支持蓝牙");
+//                            return;
+//                        }
+//
+//                        if (!bluetoothAdapter.isEnabled()) {
+//                            Log.d(TAG, "蓝牙未开启");
+//                            showToast("请先开启蓝牙");
+//                            return;
+//                        }
+//
+//                        Log.d(TAG, "蓝牙状态正常，启动ScaleActivity");
+//                        Intent intent = new Intent(this, ScaleActivity.class);
+//                        startActivityForResult(intent, REQUEST_SCALE_ACTIVITY);
+//                        Log.d(TAG, "ScaleActivity启动成功");
+//                    } catch (Exception e) {
+//                        Log.e(TAG, "启动ScaleActivity失败", e);
+//                        showToast("启动蓝牙称页面失败: " + e.getMessage());
+//                    }
+//                });
+//            }
 
             Button btnConnectScale = findViewById(R.id.btn_connect_scale);
             if (btnConnectScale != null) {
@@ -1827,53 +1827,58 @@ public class StockOutActivity extends BaseActivity implements MainContract.Stock
     }
 
     private void showStockOutDialog(NxDistributerGoodsShelfGoodsEntity goods) {
-        Log.d(TAG, "显示出库对话框，商品: " + goods.getNxDistributerGoodsEntity().getNxDgGoodsName());
-        Log.d(TAG, "订单数据: " + (goods.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities() != null ? 
-            "数量=" + goods.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities().size() : "null"));
-        
-        // 强制关闭之前的弹窗并清理缓存
-        if (currentDialog != null) {
-            currentDialog.dismiss();
-            currentDialog = null;
-            Log.d(TAG, "[弹窗创建] 已清理之前的弹窗缓存");
-        }
-        Log.d(TAG, "[弹窗创建] 开始创建新的StockOutGoodsDialog");
-        StockOutGoodsDialog dialog = new StockOutGoodsDialog(this, goods, isPrintMode);
-        Log.d(TAG, "[弹窗创建] StockOutGoodsDialog创建完成");
-        dialog.setOnConfirmListener(orders -> {
-            // 处理确认事件
-            if (orders != null && !orders.isEmpty()) {
-                // === 新增：同步订单重量到主页面数据源 ===
-                for (NxDepartmentOrdersEntity updatedOrder : orders) {
-                    for (NxDistributerGoodsShelfEntity shelf : shelfEntities) {
-                        for (NxDistributerGoodsShelfGoodsEntity g : shelf.getNxDisGoodsShelfGoodsEntities()) {
-                            List<NxDepartmentOrdersEntity> orderList = g.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities();
-                            for (NxDepartmentOrdersEntity order : orderList) {
-                                if (order.getNxDepartmentOrdersId().equals(updatedOrder.getNxDepartmentOrdersId())) {
-                                    Log.d(TAG, "同步订单重量: orderId=" + order.getNxDepartmentOrdersId() + ", oldWeight=" + order.getNxDoWeight() + ", newWeight=" + updatedOrder.getNxDoWeight());
-                                    order.setNxDoWeight(updatedOrder.getNxDoWeight());
+        try {
+            Log.d(TAG, "显示出库对话框，商品: " + goods.getNxDistributerGoodsEntity().getNxDgGoodsName());
+            Log.d(TAG, "订单数据: " + (goods.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities() != null ? 
+                "数量=" + goods.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities().size() : "null"));
+            
+            // 强制关闭之前的弹窗并清理缓存
+            if (currentDialog != null) {
+                currentDialog.dismiss();
+                currentDialog = null;
+                Log.d(TAG, "[弹窗创建] 已清理之前的弹窗缓存");
+            }
+            Log.d(TAG, "[弹窗创建] 开始创建新的StockOutGoodsDialog");
+            StockOutGoodsDialog dialog = new StockOutGoodsDialog(this, goods, isPrintMode);
+            Log.d(TAG, "[弹窗创建] StockOutGoodsDialog创建完成");
+            dialog.setOnConfirmListener(orders -> {
+                // 处理确认事件
+                if (orders != null && !orders.isEmpty()) {
+                    // === 新增：同步订单重量到主页面数据源 ===
+                    for (NxDepartmentOrdersEntity updatedOrder : orders) {
+                        for (NxDistributerGoodsShelfEntity shelf : shelfEntities) {
+                            for (NxDistributerGoodsShelfGoodsEntity g : shelf.getNxDisGoodsShelfGoodsEntities()) {
+                                List<NxDepartmentOrdersEntity> orderList = g.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities();
+                                for (NxDepartmentOrdersEntity order : orderList) {
+                                    if (order.getNxDepartmentOrdersId().equals(updatedOrder.getNxDepartmentOrdersId())) {
+                                        Log.d(TAG, "同步订单重量: orderId=" + order.getNxDepartmentOrdersId() + ", oldWeight=" + order.getNxDoWeight() + ", newWeight=" + updatedOrder.getNxDoWeight());
+                                        order.setNxDoWeight(updatedOrder.getNxDoWeight());
+                                    }
                                 }
                             }
                         }
                     }
+                    // 刷新主页面适配器
+                    updateGoodsList();
+                    goodsAdapter.notifyDataSetChanged();
+                    // === 原有打印和保存逻辑 ===
+                    printAndSaveOrders(orders, 0);
                 }
-                // 刷新主页面适配器
-                updateGoodsList();
-                goodsAdapter.notifyDataSetChanged();
-                // === 原有打印和保存逻辑 ===
-                printAndSaveOrders(orders, 0);
-            }
-            // 清理弹窗缓存
-            currentDialog = null;
-            Log.d(TAG, "[弹窗创建] 确认后清理弹窗缓存");
-        });
-        // 设置弹窗关闭监听器，确保清理缓存
-        dialog.setOnDismissListener(dialogInterface -> {
-            currentDialog = null;
-            Log.d(TAG, "[弹窗创建] 弹窗关闭，清理缓存");
-        });
-        currentDialog = dialog;
-        dialog.show();
+                // 清理弹窗缓存
+                currentDialog = null;
+                Log.d(TAG, "[弹窗创建] 确认后清理弹窗缓存");
+            });
+            // 设置弹窗关闭监听器，确保清理缓存
+            dialog.setOnDismissListener(dialogInterface -> {
+                currentDialog = null;
+                Log.d(TAG, "[弹窗创建] 弹窗关闭，清理缓存");
+            });
+            currentDialog = dialog;
+            dialog.show();
+        } catch (Exception e) {
+            Log.e(TAG, "[弹窗创建] 创建弹窗异常: " + e.getMessage(), e);
+            Toast.makeText(this, "创建弹窗失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void updateShelfTabs() {

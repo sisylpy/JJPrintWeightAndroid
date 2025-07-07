@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="48dp"
+    android:background="@color/card_background">
+
+    <TextView
+        android:id="@+id/tv_index"
+        android:layout_width="24dp"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="1."
+        android:textColor="#333"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:layout_alignParentStart="true"
+        android:layout_centerVertical="true"/>
+
+    <TextView
+        android:id="@+id/tv_goods_name"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_toEndOf="@id/tv_index"
+        android:gravity="center_vertical"
+        android:text="商品名"
+        android:textColor="#222"
+        android:textSize="14sp"
+        android:layout_marginStart="4dp"/>
+
+    <TextView
+        android:id="@+id/tv_order_info"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_toEndOf="@id/tv_goods_name"
+        android:gravity="center_vertical"
+        android:text="订:1箱  出货:1斤"
+        android:textColor="#666"
+        android:textSize="13sp"
+        android:layout_marginStart="8dp"/>
+
+    <ImageView
+        android:id="@+id/iv_delete"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        android:background="@drawable/bg_circle_delete"
+        android:layout_alignParentEnd="true"
+        android:layout_centerVertical="true"
+        android:padding="6dp"
+        android:visibility="gone"/>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_alignParentBottom="true"
+        android:background="@color/divider_color"/>
+
+</RelativeLayout> 

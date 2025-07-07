@@ -1,55 +1,82 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/background_light">
 
-    <LinearLayout
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycler_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:layout_margin="8dp"
+        android:clipToPadding="false"
+        android:paddingBottom="16dp"
+        android:background="@color/card_background"/>
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recycler_view"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:background="@android:color/white"/>
+    <!-- 空状态显示 -->
+    <LinearLayout
+        android:id="@+id/empty_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:background="@color/card_background">
 
         <TextView
-            android:id="@+id/tv_bottom_tip"
-            android:layout_width="match_parent"
+            android:id="@+id/tv_no_data"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:text="没有数据啦!"
-            android:textColor="#999999"
-            android:textSize="14sp"
-            android:padding="16dp"
-            android:layout_margin="8dp"
-            android:background="@drawable/rounded_gray_bg"/>
+            android:text="暂无数据"
+            android:textSize="16sp"
+            android:textColor="@color/text_hint"
+            android:gravity="center"/>
+
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/tv_no_data"
+    <!-- 错误状态显示 -->
+    <LinearLayout
+        android:id="@+id/error_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:gravity="center"
-        android:text="没有数据啦!"
-        android:textColor="#999999"
-        android:textSize="16sp"
-        android:background="@drawable/rounded_white_bg"
-        android:elevation="2dp"
-        android:visibility="gone"/>
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:background="@color/card_background">
 
-    <TextView
-        android:id="@+id/tv_error"
+        <TextView
+            android:id="@+id/tv_error"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="加载失败"
+            android:textSize="16sp"
+            android:textColor="@color/error_red"
+            android:gravity="center"/>
+
+    </LinearLayout>
+
+    <!-- 加载状态显示 -->
+    <LinearLayout
+        android:id="@+id/loading_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:gravity="center"
-        android:text="加载失败"
-        android:textColor="#FF5252"
-        android:textSize="16sp"
-        android:background="@drawable/rounded_white_bg"
-        android:elevation="2dp"
-        android:visibility="gone"/>
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:background="@color/card_background">
+
+        <ProgressBar
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="加载中..."
+            android:textSize="16sp"
+            android:textColor="@color/text_secondary"/>
+
+    </LinearLayout>
 
 </FrameLayout> 

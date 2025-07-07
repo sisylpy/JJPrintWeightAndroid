@@ -34,17 +34,17 @@
             android:textColor="@android:color/black"
             android:textStyle="bold"/>
 
-        <!-- 右侧设置按钮 -->
+        <!-- 右侧部门按钮 -->
         <ImageButton
-            android:id="@+id/btn_settings"
+            android:id="@+id/btn_right"
             android:layout_width="36dp"
             android:layout_height="36dp"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
             android:layout_marginEnd="16dp"
-            android:src="@android:drawable/ic_menu_manage"
+            android:src="@android:drawable/ic_menu_agenda"
             android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="设置"/>
+            android:contentDescription="部门"/>
 
     </RelativeLayout>
 

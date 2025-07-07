@@ -89,7 +89,9 @@
             android:label="蓝牙称"
             android:theme="@style/AppTheme"/>
 
-        <activity android:name=".main.DepOutOrderActivity" />
+        <activity android:name=".main.DepOutOrderSimpleActivity"
+            android:label="部门出库订单"
+            android:theme="@style/AppTheme" />
 
     </application>
 

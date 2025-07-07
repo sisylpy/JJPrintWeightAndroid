@@ -3,24 +3,84 @@
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white">
+    android:background="#F8FAFC">
 
-    <!-- 只读部门列表 -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rv_departments"
-            android:layout_width="match_parent"
+
+
+    <!-- 搜索框 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@android:color/white"
+        android:padding="16dp"
+        android:elevation="1dp">
+
+        <EditText
+            android:id="@+id/et_search"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:hint="搜索部门..."
+            android:textSize="14sp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:background="@android:drawable/editbox_background"
+            android:drawableStart="@android:drawable/ic_menu_search"
+            android:drawablePadding="8dp"
+            android:singleLine="true"
+            android:imeOptions="actionSearch"/>
+
+    </LinearLayout>
+
+    <!-- 部门列表 -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_departments"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:padding="8dp" />
+        android:padding="8dp"
+        android:clipToPadding="false"
+        android:scrollbars="vertical"
+        android:divider="@android:color/darker_gray"
+        android:dividerHeight="1dp"/>
 
     <!-- 暂无数据提示 -->
+    <LinearLayout
+        android:id="@+id/ll_no_data"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:src="@android:drawable/ic_menu_info_details"
+            android:alpha="0.5"
+            android:contentDescription="暂无数据"/>
+
         <TextView
             android:id="@+id/tv_no_data"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-        android:text="暂无数据"
-            android:gravity="center"
-            android:padding="16dp"
-        android:visibility="gone" />
+            android:layout_marginTop="16dp"
+            android:text="暂无部门数据"
+            android:textSize="16sp"
+            android:textColor="#666666"
+            android:gravity="center"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="请检查网络连接或联系管理员"
+            android:textSize="14sp"
+            android:textColor="#999999"
+            android:gravity="center"/>
+
+    </LinearLayout>
 
 </LinearLayout> 

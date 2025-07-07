@@ -71,11 +71,7 @@ public class StockOutGoodsDialog extends Dialog {
     private TextView scrollHint;
     private LinearLayout llOrders;
     private TextView tvTitle;
-    // ========== tvScaleStatus变量已删除（2025-07-08）==========
-    // 功能说明：蓝牙秤状态显示控件
-    // 删除原因：用户要求删除弹窗上面的蓝牙秤状态区域
-    // private TextView tvScaleStatus;
-    // ========== tvScaleStatus变量删除结束 ==========
+    private TextView tvScaleStatus;
     private String scaleName;
     private String scaleAddress;
     private boolean isScaleConnected;
@@ -112,56 +108,12 @@ public class StockOutGoodsDialog extends Dialog {
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
                     Log.d(TAG, "[蓝牙] 连接成功，开始发现服务");
                     isScaleConnected = true;
-                    
-                    // ========== updateScaleStatus调用已删除（2025-07-08）==========
-                    // 功能说明：更新蓝牙秤状态显示
-                    // 删除原因：用户要求删除弹窗上面的蓝牙秤状态区域
-                    /*
-                    // 在主线程中更新UI
-                    if (mContext instanceof Activity) {
-                        ((Activity) mContext).runOnUiThread(() -> {
-                            updateScaleStatus(true, null, scaleAddress);
-                        });
-                    }
-                    */
-                    // ========== updateScaleStatus调用删除结束 ==========
-                    
+                    updateScaleStatus(true, null, scaleAddress);
                     gatt.discoverServices();
-                    
-                    // 添加服务发现超时检测
-                    new Handler().postDelayed(() -> {
-                        Log.d(TAG, "[蓝牙] 服务发现超时检查");
-                        if (writeCharacteristic == null || notifyCharacteristic == null) {
-                            Log.e(TAG, "[蓝牙] ❌ 服务发现超时！特征为空，可能原因：");
-                            Log.e(TAG, "[蓝牙] 1. 设备不支持该服务UUID");
-                            Log.e(TAG, "[蓝牙] 2. 设备响应超时");
-                            Log.e(TAG, "[蓝牙] 3. 连接不稳定");
-                            Log.e(TAG, "[蓝牙] 4. 设备状态异常");
-                            
-                            // 尝试重新发现服务
-                            Log.d(TAG, "[蓝牙] 尝试重新发现服务...");
-                            gatt.discoverServices();
-                        } else {
-                            Log.d(TAG, "[蓝牙] ✅ 服务发现成功，特征已找到");
-                        }
-                    }, 10000); // 10秒超时
-                    
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                     Log.d(TAG, "[蓝牙] 连接断开");
                     isScaleConnected = false;
-                    
-                    // ========== updateScaleStatus调用已删除（2025-07-08）==========
-                    // 功能说明：更新蓝牙秤状态显示
-                    // 删除原因：用户要求删除弹窗上面的蓝牙秤状态区域
-                    /*
-                    // 在主线程中更新UI
-                    if (mContext instanceof Activity) {
-                        ((Activity) mContext).runOnUiThread(() -> {
-                            updateScaleStatus(false, null, scaleAddress);
-                        });
-                    }
-                    */
-                    // ========== updateScaleStatus调用删除结束 ==========
+                    updateScaleStatus(false, null, scaleAddress);
                 }
             }
         }
@@ -172,63 +124,12 @@ public class StockOutGoodsDialog extends Dialog {
                 Log.d(TAG, "[蓝牙] onServicesDiscovered: status=" + status);
                 if (status == BluetoothGatt.GATT_SUCCESS) {
                     Log.d(TAG, "[蓝牙] 服务发现成功");
-                    
-                    // 调试：显示所有发现的服务
-                    Log.d(TAG, "[蓝牙] 🔍 开始检查所有发现的服务...");
-                    List<BluetoothGattService> services = gatt.getServices();
-                    Log.d(TAG, "[蓝牙] 📊 发现服务数量: " + (services != null ? services.size() : 0));
-                    
-                    if (services != null) {
-                        for (int i = 0; i < services.size(); i++) {
-                            BluetoothGattService service = services.get(i);
-                            String serviceUuid = service.getUuid().toString().toLowerCase();
-                            Log.d(TAG, "[蓝牙] 服务" + i + ": " + serviceUuid);
-                            
-                            // 检查特征
-                            List<BluetoothGattCharacteristic> characteristics = service.getCharacteristics();
-                            Log.d(TAG, "[蓝牙] 服务" + i + "特征数量: " + (characteristics != null ? characteristics.size() : 0));
-                            
-                            if (characteristics != null) {
-                                for (int j = 0; j < characteristics.size(); j++) {
-                                    BluetoothGattCharacteristic characteristic = characteristics.get(j);
-                                    String charUuid = characteristic.getUuid().toString().toLowerCase();
-                                    Log.d(TAG, "[蓝牙] 服务" + i + "特征" + j + ": " + charUuid + 
-                                          " (属性: " + characteristic.getProperties() + ")");
-                                }
-                            }
-                        }
-                    }
-                    
-                    // 查找特征 - 尝试多种UUID格式
+                    // 查找特征
                     BluetoothGattService service = gatt.getService(UUID.fromString("0000ffe0-0000-1000-8000-00805f9b34fb"));
-                    if (service == null) {
-                        Log.w(TAG, "[蓝牙] ⚠️ 未找到标准UUID服务，尝试其他格式...");
-                        // 尝试其他常见的UUID格式
-                        service = gatt.getService(UUID.fromString("0000fff0-0000-1000-8000-00805f9b34fb"));
-                        if (service != null) {
-                            Log.d(TAG, "[蓝牙] ✅ 找到FFF0服务");
-                        } else {
-                            service = gatt.getService(UUID.fromString("0000ffe0-0000-1000-8000-00805f9b34fb"));
-                            if (service != null) {
-                                Log.d(TAG, "[蓝牙] ✅ 找到FFE0服务（大写）");
-                            }
-                        }
-                    }
-                    
                     if (service != null) {
                         Log.d(TAG, "[蓝牙] 找到服务");
                         writeCharacteristic = service.getCharacteristic(UUID.fromString("0000ffe1-0000-1000-8000-00805f9b34fb"));
                         notifyCharacteristic = service.getCharacteristic(UUID.fromString("0000ffe1-0000-1000-8000-00805f9b34fb"));
-                        
-                        // 如果标准UUID没找到，尝试其他格式
-                        if (writeCharacteristic == null) {
-                            Log.w(TAG, "[蓝牙] ⚠️ 未找到标准特征UUID，尝试其他格式...");
-                            writeCharacteristic = service.getCharacteristic(UUID.fromString("0000fff1-0000-1000-8000-00805f9b34fb"));
-                            notifyCharacteristic = service.getCharacteristic(UUID.fromString("0000fff2-0000-1000-8000-00805f9b34fb"));
-                            if (writeCharacteristic != null) {
-                                Log.d(TAG, "[蓝牙] ✅ 找到FFF1/FFF2特征");
-                            }
-                        }
                         
                         if (writeCharacteristic != null) {
                             Log.d(TAG, "[蓝牙] 找到写特征");
@@ -388,10 +289,6 @@ public class StockOutGoodsDialog extends Dialog {
             Log.e("StockOutGoodsDialog", "商品实体为空或标题视图为空");
         }
 
-        // ========== 蓝牙秤状态显示代码已删除（2025-07-08）==========
-        // 功能说明：弹窗顶部显示蓝牙秤连接状态
-        // 删除原因：用户要求删除弹窗上面的蓝牙秤状态区域
-        /*
         // 新增：弹窗顶部显示蓝牙秤状态
         tvScaleStatus = findViewById(R.id.tv_scale_status);
         SharedPreferences sp = mContext.getSharedPreferences("scale_cache", Context.MODE_PRIVATE);
@@ -407,8 +304,6 @@ public class StockOutGoodsDialog extends Dialog {
         if (tvScaleStatus != null) {
             tvScaleStatus.setText(scaleInfo.toString());
         }
-        */
-        // ========== 蓝牙秤状态显示代码删除结束 ==========
 
         // 初始化订单列表
         ordersRecyclerView = findViewById(R.id.rv_orders);
@@ -464,6 +359,15 @@ public class StockOutGoodsDialog extends Dialog {
         // 标记初始化完成，允许蓝牙秤数据更新
         isInitialized = true;
         Log.d(TAG, "[弹窗] initView: 初始化完成，允许蓝牙秤数据更新");
+
+        // 设置取消按钮
+        TextView btnCancel = findViewById(R.id.btn_cancel);
+        if (btnCancel != null) {
+            btnCancel.setOnClickListener(v -> {
+                Log.d("StockOutGoodsDialog", "点击取消按钮");
+                dismiss();
+            });
+        }
 
         // 设置确认按钮
         TextView btnConfirm = findViewById(R.id.btn_confirm);
@@ -570,11 +474,7 @@ public class StockOutGoodsDialog extends Dialog {
                     int selectedPosition = ordersAdapter.getSelectedPosition();
                     Log.d(TAG, "[弹窗] 更新选中订单重量: position=" + selectedPosition + ", weight=" + weight);
                     ordersAdapter.updateWeightAtPosition(selectedPosition, weight);
-                    // ========== updateScaleStatus调用已删除（2025-07-08）==========
-                    // 功能说明：更新蓝牙秤状态显示
-                    // 删除原因：用户要求删除弹窗上面的蓝牙秤状态区域
-                    // updateScaleStatus(isScaleConnected, scaleName, scaleAddress);
-                    // ========== updateScaleStatus调用删除结束 ==========
+                    updateScaleStatus(isScaleConnected, scaleName, scaleAddress);
             } else {
                     Log.e(TAG, "[弹窗] 无法更新重量: ordersAdapter=" + ordersAdapter + ", itemCount=" + (ordersAdapter != null ? ordersAdapter.getItemCount() : 0));
             }
@@ -702,10 +602,6 @@ public class StockOutGoodsDialog extends Dialog {
         }
     }
     
-    // ========== updateScaleStatus方法已删除（2025-07-08）==========
-    // 功能说明：更新蓝牙秤状态显示
-    // 删除原因：用户要求删除弹窗上面的蓝牙秤状态区域
-    /*
     private void updateScaleStatus(boolean connected, String name, String address) {
         if (tvScaleStatus != null) {
             StringBuilder scaleInfo = new StringBuilder();
@@ -717,8 +613,6 @@ public class StockOutGoodsDialog extends Dialog {
             tvScaleStatus.setText(scaleInfo.toString());
         }
     }
-    */
-    // ========== updateScaleStatus方法删除结束 ==========
     
     private String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder();

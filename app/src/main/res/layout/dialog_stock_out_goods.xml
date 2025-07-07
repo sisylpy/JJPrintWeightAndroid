@@ -1,70 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
+    android:layout_width="340dp"
     android:layout_height="wrap_content"
-    android:background="@drawable/card_shadow"
+    android:background="#F5F5F5"
     android:orientation="vertical"
-    android:layout_margin="16dp">
+    android:padding="0dp">
 
-    <!-- 现代化标题栏 -->
+    <!-- 现代化标题栏（只保留商品名+单位，纯色背景，居中） -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/dialog_header_gradient"
+        android:background="@color/stockout_dialog_header"
         android:orientation="vertical"
         android:padding="20dp"
         android:gravity="center"
         android:layout_marginBottom="0dp">
-
-        <!-- 标题图标 -->
-        <ImageView
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:src="@drawable/ic_department"
-            android:tint="@android:color/white"
-            android:layout_marginBottom="8dp"/>
 
         <TextView
             android:id="@+id/tv_goods_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="@android:color/white"
-            android:textSize="20sp"
+            android:textSize="22sp"
             android:textStyle="bold"
             android:gravity="center"
             android:fontFamily="sans-serif-medium" />
 
+        <!-- ========== 蓝牙秤状态区域已删除（2025-07-08）========== -->
+        <!-- 功能说明：显示蓝牙秤连接状态 -->
+        <!-- 删除原因：用户要求删除弹窗上面的蓝牙秤状态区域 -->
+        <!--
         <TextView
+            android:id="@+id/tv_scale_status"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="请确认出库数量"
-            android:textColor="#E0E0E0"
+            android:text="蓝牙秤: 未连接"
+            android:textColor="@android:color/holo_green_dark"
+            android:padding="8dp"
             android:textSize="14sp"
-            android:layout_marginTop="4dp"
-            android:fontFamily="sans-serif-light" />
+            android:layout_marginTop="8dp"
+            android:fontFamily="sans-serif-medium" />
+        -->
+        <!-- ========== 蓝牙秤状态区域删除结束 ========== -->
     </LinearLayout>
 
-    <!-- 分割线 -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@drawable/divider_modern" />
-
-    <!-- 订单列表容器 -->
+    <!-- 订单列表容器（紧贴顶部） -->
     <FrameLayout
         android:id="@+id/list_container"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:minHeight="200dp"
-        android:maxHeight="400dp"
-        android:background="@drawable/list_container_bg">
+        android:layout_height="400dp"
+        android:background="@drawable/list_container_bg"
+        android:paddingLeft="0dp"
+        android:paddingStart="0dp">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_orders"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:padding="12dp"
+            android:padding="0dp"
             android:scrollbars="vertical" />
 
         <!-- 滚动提示 -->
@@ -93,13 +87,6 @@
             android:visibility="gone"
             android:padding="40dp">
 
-            <ImageView
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:src="@drawable/ic_department"
-                android:tint="@color/text_secondary"
-                android:layout_marginBottom="16dp"/>
-
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -119,12 +106,6 @@
             android:gravity="center"
             android:visibility="gone"
             android:padding="40dp">
-
-            <ImageView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/loading_animation"
-                android:layout_marginBottom="16dp"/>
 
             <TextView
                 android:layout_width="wrap_content"
@@ -146,37 +127,22 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:padding="20dp"
         android:background="@android:color/white"
         android:layout_marginTop="0dp">
 
         <Button
-            android:id="@+id/btn_cancel"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_marginEnd="8dp"
-            android:layout_weight="1"
-            android:background="@drawable/button_cancel_ripple_modern"
-            android:text="取消"
-            android:textColor="@color/text_secondary"
-            android:textSize="16sp"
-            android:gravity="center"
-            android:fontFamily="sans-serif-medium"
-            android:elevation="2dp" />
-
-        <Button
             android:id="@+id/btn_confirm"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_marginStart="8dp"
-            android:layout_weight="1"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
             android:background="@drawable/button_ripple_modern"
-            android:text="确认出库"
+            android:text="保存"
             android:textColor="@android:color/white"
-            android:textSize="16sp"
+            android:textSize="18sp"
             android:gravity="center"
             android:fontFamily="sans-serif-medium"
-            android:elevation="4dp" />
+            android:elevation="0dp"
+            android:layout_gravity="center_horizontal" />
     </LinearLayout>
 </LinearLayout>

@@ -185,6 +185,21 @@ public class DepOutOrderPresenter {
     }
 
     /**
+     * 删除订单（通用方法）
+     */
+    public void deleteOrder(String orderId) {
+        if (mView != null) {
+            mView.showLoading();
+        }
+        
+        Log.d(TAG, "开始删除订单: orderId=" + orderId);
+        
+        // 根据订单ID判断是内销订单还是国标订单
+        // 这里需要根据实际业务逻辑来判断，暂时使用deleteGbOrder
+        deleteGbOrder(orderId);
+    }
+
+    /**
      * 删除国标订单
      */
     public void deleteGbOrder(String id) {

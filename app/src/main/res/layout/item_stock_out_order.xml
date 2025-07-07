@@ -4,135 +4,84 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:padding="16dp"
+    android:padding="10dp"
     android:gravity="center_vertical"
-    android:background="@drawable/order_item_modern_bg"
-    android:layout_margin="4dp"
-    android:elevation="2dp">
+    android:layout_margin="0dp"
+    android:elevation="0dp">
 
-    <!-- 选中指示器 -->
-    <LinearLayout
-        android:id="@+id/selected_indicator"
-        android:layout_width="4dp"
-        android:layout_height="match_parent"
-        android:background="@drawable/selected_indicator_gradient"
-        android:visibility="gone"
-        android:layout_marginEnd="12dp"/>
-
-    <!-- 左侧信息区域 -->
+    <!-- 左侧3/4：客户名+订货数量（同一行两端对齐），备注内容在下方 -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:layout_marginEnd="12dp">
+        android:layout_weight="2"
+        android:orientation="vertical">
 
-        <!-- 部门名称 -->
-        <TextView
-            android:id="@+id/tv_department_name"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="#222222"
-            android:textStyle="bold"
-            android:textSize="16sp"
-            android:fontFamily="sans-serif-medium"
-            android:maxLines="2"
-            android:ellipsize="end"/>
-
-        <!-- 订单数量信息 -->
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="6dp"
-            android:gravity="center_vertical">
-
-            <ImageView
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:src="@drawable/ic_department"
-                android:tint="@color/light_green"
-                android:layout_marginEnd="4dp"/>
-
+            android:orientation="horizontal">
+            <TextView
+                android:id="@+id/tv_department_name"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="部门名"
+                android:textColor="#222222"
+                android:textStyle="bold"
+                android:textSize="16sp"
+                android:fontFamily="sans-serif-medium"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:gravity="start|center_vertical"/>
             <TextView
                 android:id="@+id/tv_order_quantity"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/light_green"
-                android:textSize="14sp"
-                android:fontFamily="sans-serif-medium"/>
+                android:text="数量"
+                android:textColor="#3fc1ab"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:fontFamily="sans-serif-medium"
+                android:gravity="end|center_vertical"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:layout_marginEnd="13dp"/>
         </LinearLayout>
 
-        <!-- 备注信息 -->
         <TextView
             android:id="@+id/tv_remark"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@color/text_danger"
-            android:textSize="12sp"
+            android:text="备注"
+            android:textColor="#FF0000"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif-light"
+            android:padding="5dp"
             android:layout_marginTop="4dp"
             android:visibility="gone"
-            android:fontFamily="sans-serif-light"
-            android:background="@drawable/remark_bg"
-            android:padding="4dp"/>
+            android:gravity="start|center_vertical"/>
     </LinearLayout>
 
-    <!-- 右侧操作区域 -->
+    <!-- 右侧1/4：数量输入框，垂直居中 -->
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center_vertical">
-
-        <!-- 数量输入区域 -->
-        <LinearLayout
-            android:layout_width="wrap_content"
+        android:layout_weight="1"
+        android:gravity="center_vertical"
+        android:orientation="vertical">
+        <EditText
+            android:id="@+id/et_out_quantity"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:background="@drawable/input_container_bg"
-            android:padding="8dp">
-
-            <EditText
-                android:id="@+id/et_out_quantity"
-                android:layout_width="80dp"
-                android:layout_height="36dp"
-                android:inputType="number"
-                android:background="@drawable/edit_text_focus_modern"
-                android:padding="8dp"
-                android:textSize="14sp"
-                android:hint="输入数量"
-                android:textColorHint="@color/text_hint_color"
-                android:gravity="center_vertical|end"
-                android:fontFamily="sans-serif-medium"/>
-
-            <TextView
-                android:id="@+id/tv_unit"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:textColor="@color/light_green"
-                android:textSize="14sp"
-                android:fontFamily="sans-serif-medium"/>
-        </LinearLayout>
-
-        <!-- 蓝牙秤按钮 -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp"
-            android:gravity="center">
-
-            <ImageButton
-                android:id="@+id/btn_scale"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="@drawable/scale_button_bg"
-                android:src="@drawable/ic_scale"
-                android:tint="@color/light_green"
-                android:contentDescription="蓝牙秤"
-                android:padding="4dp"/>
-        </LinearLayout>
+            android:padding="8dp"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:text=""
+            android:textColor="#222222"
+            android:hint="输入重量"
+            android:textColorHint="#B0B0B0"
+            android:gravity="center"
+            android:fontFamily="sans-serif-medium"
+            android:inputType="numberDecimal"/>
     </LinearLayout>
 </LinearLayout> 

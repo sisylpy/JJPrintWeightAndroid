@@ -156,22 +156,6 @@ public class StockOutGoodsAdapter extends RecyclerView.Adapter<StockOutGoodsAdap
             }
         });
 
-        // 设置蓝牙秤按钮点击事件
-        holder.btnScale.setOnClickListener(v -> {
-            Log.d("StockOutGoodsAdapter", "[按钮] ========== 蓝牙秤按钮点击开始 ==========");
-            Log.d("StockOutGoodsAdapter", "[按钮] 点击的商品: " + goods.getNxDistributerGoodsEntity().getNxDgGoodsName());
-            Log.d("StockOutGoodsAdapter", "[按钮] scaleButtonClickListener: " + (scaleButtonClickListener != null ? "不为空" : "为空"));
-            
-            if (scaleButtonClickListener != null) {
-                Log.d("StockOutGoodsAdapter", "[按钮] 调用scaleButtonClickListener.onScaleButtonClick");
-                scaleButtonClickListener.onScaleButtonClick(goods);
-                Log.d("StockOutGoodsAdapter", "[按钮] scaleButtonClickListener.onScaleButtonClick调用完成");
-            } else {
-                Log.e("StockOutGoodsAdapter", "[按钮] scaleButtonClickListener为空，无法处理点击事件");
-            }
-            Log.d("StockOutGoodsAdapter", "[按钮] ========== 蓝牙秤按钮点击结束 ==========");
-        });
-
         // 设置选中状态
         holder.itemView.setSelected(position == currentSelectedPosition);
     }
@@ -226,7 +210,6 @@ public class StockOutGoodsAdapter extends RecyclerView.Adapter<StockOutGoodsAdap
         TextView goodsName;
         TextView goodsStandard;
         LinearLayout ordersContainer;
-        ImageButton btnScale;
 
         public InnerHolder(View itemView) {
             super(itemView);
@@ -234,21 +217,7 @@ public class StockOutGoodsAdapter extends RecyclerView.Adapter<StockOutGoodsAdap
             goodsName = itemView.findViewById(R.id.tv_goods_name);
             goodsStandard = itemView.findViewById(R.id.tv_goods_standard);
             ordersContainer = itemView.findViewById(R.id.ll_orders_container);
-            btnScale = itemView.findViewById(R.id.btn_scale);
         }
-    }
-
-    // 新增：蓝牙秤按钮点击回调接口
-    public interface OnScaleButtonClickListener {
-        void onScaleButtonClick(NxDistributerGoodsShelfGoodsEntity entity);
-    }
-
-    private OnScaleButtonClickListener scaleButtonClickListener;
-
-    public void setOnScaleButtonClickListener(OnScaleButtonClickListener listener) {
-        Log.d("StockOutGoodsAdapter", "[监听器] setOnScaleButtonClickListener: listener=" + (listener != null ? "不为空" : "为空"));
-        this.scaleButtonClickListener = listener;
-        Log.d("StockOutGoodsAdapter", "[监听器] scaleButtonClickListener设置完成");
     }
 }
 

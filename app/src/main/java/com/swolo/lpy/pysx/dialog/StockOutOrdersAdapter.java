@@ -27,6 +27,7 @@ import com.swolo.lpy.pysx.main.modal.NxDepartmentEntity;
 import com.swolo.lpy.pysx.main.modal.GbDepartmentEntity;
 
 import java.util.List;
+import java.util.Map;
 
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -37,6 +38,11 @@ public class StockOutOrdersAdapter extends RecyclerView.Adapter<StockOutOrdersAd
     private Activity activity;
     private int currentPosition = -1;
     private int selectedPosition = 0; // 当前选中的订单位置，默认选中第一个
+    // ========== 稳定状态Map已屏蔽（2025-07-08）==========
+    // 功能说明：存储每个位置的稳定状态
+    // 屏蔽原因：用户反馈稳定状态变化太快，效果不明显，改为选中状态显示绿色
+    // private final Map<Integer, Boolean> stableStateMap = new java.util.HashMap<>();
+    // ========== 稳定状态Map屏蔽结束 ==========
 
     public StockOutOrdersAdapter(Activity activity, List<NxDepartmentOrdersEntity> ordersList, NxDistributerGoodsShelfGoodsEntity goods) {
         this.activity = activity;
@@ -150,25 +156,21 @@ public class StockOutOrdersAdapter extends RecyclerView.Adapter<StockOutOrdersAd
         if (position == selectedPosition) {
             // 选中的订单：淡绿色背景，黑色文字，数量绿色，输入框绿色边框
             holder.itemView.setBackgroundResource(R.drawable.order_item_selected_bg);
-            holder.departmentName.setTextColor(Color.parseColor("#222222"));
-            holder.orderQuantity.setTextColor(Color.parseColor("#3fc1ab"));
-            holder.outQuantity.setTextColor(Color.parseColor("#222222"));
-            holder.unit.setTextColor(Color.parseColor("#3fc1ab"));
+//            holder.departmentName.setTextColor(Color.parseColor("#222222"));
+//            holder.orderQuantity.setTextColor(Color.parseColor("#3fc1ab"));
+//            holder.outQuantity.setTextColor(Color.parseColor("#222222"));
             if (holder.remark.getVisibility() == View.VISIBLE) {
-                holder.remark.setTextColor(Color.parseColor("#222222"));
+                holder.remark.setTextColor(Color.parseColor("#FF0000"));
             }
-            holder.selectedIndicator.setVisibility(View.GONE); // 不再显示蓝色指示条
         } else {
-            // 未选中的订单：白色背景，黑色文字，数量灰色，输入框灰色边框
+            // 未选中的订单：白色背景，黑色文字，数量绿色，输入框灰色边框
             holder.itemView.setBackgroundResource(R.drawable.order_item_bg);
-            holder.departmentName.setTextColor(Color.parseColor("#222222"));
-            holder.orderQuantity.setTextColor(Color.parseColor("#d6d6d6"));
-            holder.outQuantity.setTextColor(Color.parseColor("#222222"));
-            holder.unit.setTextColor(Color.parseColor("#d6d6d6"));
+//            holder.departmentName.setTextColor(Color.parseColor("#222222"));
+//            holder.orderQuantity.setTextColor(Color.parseColor("#3fc1ab"));
+//            holder.outQuantity.setTextColor(Color.parseColor("#222222"));
             if (holder.remark.getVisibility() == View.VISIBLE) {
-                holder.remark.setTextColor(Color.parseColor("#222222"));
+                holder.remark.setTextColor(Color.parseColor("#FF0000"));
             }
-            holder.selectedIndicator.setVisibility(View.GONE);
         }
         
         // 设置点击事件
@@ -196,6 +198,18 @@ public class StockOutOrdersAdapter extends RecyclerView.Adapter<StockOutOrdersAd
                 }
             }
         });
+        
+        // ========== 输入框边框逻辑已修改（2025-07-08）==========
+        // 功能说明：输入框边框根据选中状态切换，而不是稳定状态
+        // 修改原因：用户反馈稳定状态变化太快，效果不明显，改为选中状态显示绿色
+        if (position == selectedPosition) {
+            // 选中的订单：绿色边框
+            holder.outQuantity.setBackgroundResource(R.drawable.edit_text_stable_bg);
+        } else {
+            // 未选中的订单：默认边框
+            holder.outQuantity.setBackgroundResource(R.drawable.edit_text_modern_bg);
+        }
+        // ========== 输入框边框逻辑修改结束 ==========
         
         Log.d("StockOutOrdersAdapter", "[适配器] ========== onBindViewHolder结束，位置: " + position + " ==========");
     }
@@ -316,7 +330,10 @@ public class StockOutOrdersAdapter extends RecyclerView.Adapter<StockOutOrdersAd
             Log.d("StockOutOrdersAdapter", "[适配器] 选中位置变更: " + oldSelectedPosition + " -> " + selectedPosition);
             Log.d("StockOutOrdersAdapter", "[适配器] currentPosition也更新为: " + currentPosition);
             
-            // 清空新选中订单的重量
+            // ========== 原有逻辑已屏蔽（2025-07-08）==========
+            // 功能说明：清空新选中订单的重量
+            // 屏蔽原因：新增功能已覆盖此需求，新选中订单重量应该保持为空
+            /*
             if (oldSelectedPosition != selectedPosition) {
                 NxDepartmentOrdersEntity newSelectedOrder = ordersList.get(selectedPosition);
                 if (newSelectedOrder != null) {
@@ -326,6 +343,23 @@ public class StockOutOrdersAdapter extends RecyclerView.Adapter<StockOutOrdersAd
                     Log.d("StockOutOrdersAdapter", "[适配器] 重量已清空");
                 }
             }
+            */
+            // ========== 原有逻辑屏蔽结束 ==========
+            
+            // ========== 新增功能：清空失去选中状态的订单重量 ==========
+            // 功能说明：当订单从选中状态变为非选中状态时，清空其重量字段
+            // 修改时间：2025-07-08
+            // 修改原因：用户需求 - 选中状态离开后重量归为空
+            if (oldSelectedPosition != selectedPosition && oldSelectedPosition >= 0 && oldSelectedPosition < ordersList.size()) {
+                NxDepartmentOrdersEntity oldSelectedOrder = ordersList.get(oldSelectedPosition);
+                if (oldSelectedOrder != null) {
+                    String oldWeight = oldSelectedOrder.getNxDoWeight();
+                    Log.d("StockOutOrdersAdapter", "[适配器] 新增功能 - 清空失去选中状态的订单重量: position=" + oldSelectedPosition + ", 原重量=" + oldWeight);
+                    oldSelectedOrder.setNxDoWeight("");
+                    Log.d("StockOutOrdersAdapter", "[适配器] 新增功能 - 失去选中状态的订单重量已清空");
+                }
+            }
+            // ========== 新增功能结束 ==========
             
             // 刷新UI显示
             if (activity != null) {
@@ -372,24 +406,29 @@ public class StockOutOrdersAdapter extends RecyclerView.Adapter<StockOutOrdersAd
         return selectedPosition;
     }
 
+    // ========== setStableStateForPosition方法已屏蔽（2025-07-08）==========
+    // 功能说明：设置指定位置的稳定状态
+    // 屏蔽原因：用户反馈稳定状态变化太快，效果不明显，改为选中状态显示绿色
+    /*
+    public void setStableStateForPosition(int position, boolean isStable) {
+        stableStateMap.put(position, isStable);
+        notifyItemChanged(position);
+    }
+    */
+    // ========== setStableStateForPosition方法屏蔽结束 ==========
+
     public class InnerHolder extends RecyclerView.ViewHolder {
         private TextView departmentName;
         private TextView orderQuantity;
         private EditText outQuantity;
-        private TextView unit;
         private TextView remark;
-        private ImageButton btnScale;
-        private LinearLayout selectedIndicator;
 
         public InnerHolder(View view) {
             super(view);
             departmentName = view.findViewById(R.id.tv_department_name);
             orderQuantity = view.findViewById(R.id.tv_order_quantity);
             outQuantity = view.findViewById(R.id.et_out_quantity);
-            unit = view.findViewById(R.id.tv_unit);
             remark = view.findViewById(R.id.tv_remark);
-            btnScale = view.findViewById(R.id.btn_scale);
-            selectedIndicator = view.findViewById(R.id.selected_indicator);
         }
     }
 } 
