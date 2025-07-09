@@ -65,11 +65,11 @@ public class DepartmentAdapter extends RecyclerView.Adapter<DepartmentAdapter.In
         Object item = departmentList.get(position);
         if (item instanceof NxDepartmentEntity) {
             NxDepartmentEntity nxDep = (NxDepartmentEntity) item;
-            String displayText = (nxDep.getNxDepartmentPickName() != null ? "(" + nxDep.getNxDepartmentPickName() + ")" : "") + nxDep.getNxDepartmentName();
+            String displayText = nxDep.getNxDepartmentName();
             holder.departmentName.setText(displayText);
         } else if (item instanceof GbDepartmentEntity) {
             GbDepartmentEntity gbDep = (GbDepartmentEntity) item;
-            String displayText = (gbDep.getGbDepartmentAttrName() != null ? "(" + gbDep.getGbDepartmentAttrName() + ")" : "") + gbDep.getGbDepartmentName();
+            String displayText =  gbDep.getGbDepartmentName();
             holder.departmentName.setText(displayText);
         }
         holder.itemView.setOnClickListener(v -> {

@@ -54,7 +54,7 @@
 
         <activity android:name=".main.DepartmentListActivity"
             android:label="部门列表"
-            android:theme="@style/AppTheme">
+            android:theme="@style/AppTheme.NoActionBar">
         </activity>
 
         <activity android:name=".main.CustomerListActivity"
@@ -91,7 +91,7 @@
 
         <activity android:name=".main.DepOutOrderSimpleActivity"
             android:label="部门出库订单"
-            android:theme="@style/AppTheme" />
+            android:theme="@style/AppTheme.NoActionBar"/>
 
     </application>
 

@@ -75,12 +75,19 @@
     </RelativeLayout>
 
     <!-- 客户列表 -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_customers"
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipe_refresh_layout"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:background="@android:color/white"/>
+        android:layout_weight="1">
+        
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_customers"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/white"/>
+            
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
     <!-- 底部操作按钮（悬浮） -->
     <FrameLayout

@@ -61,6 +61,7 @@ import java.util.Map;
 
 import com.swolo.lpy.pysx.main.modal.NxDepartmentEntity;
 import com.swolo.lpy.pysx.main.modal.GbDepartmentEntity;
+import com.swolo.lpy.pysx.dialog.ManualInputDialog;
 
 /**
  * 客户出库页面 - 核心业务页面
@@ -578,16 +579,17 @@ public class CustomerStockOutActivity extends AppCompatActivity {
         Log.d(TAG, "[日志追踪] showStockOutDialog called, goods=" + goods.getNxDistributerGoodsEntity().getNxDgGoodsName());
         refreshStockOutMode();
         Log.d(TAG, "[日志追踪] 当前出库模式: " + (isPrintMode ? "打印标签" : "非打印标签"));
-        Log.d(TAG, "[日志追踪] 开始创建StockOutGoodsDialog");
+        Log.d(TAG, "[日志追踪] 开始创建出库弹窗判断");
+
+        // 【屏蔽】原有仅弹出蓝牙称弹窗的实现，保留以便随时恢复
+        /*
         StockOutGoodsDialog dialog = new StockOutGoodsDialog(this, goods, isPrintMode);
         Log.d(TAG, "[日志追踪] StockOutGoodsDialog创建完成");
         dialog.setOnConfirmListener(orders -> {
             Log.d(TAG, "[确认回调] ========== 开始confirmListener.onConfirm ==========");
             Log.d(TAG, "[确认回调] confirmListener.onConfirm被调用, 订单数量: " + (orders != null ? orders.size() : 0));
             Log.d(TAG, "[确认回调] 当前打印模式: " + (isPrintMode ? "打印标签" : "非打印标签"));
-            
             if (orders != null && !orders.isEmpty()) {
-                // 打印订单详情
                 for (int i = 0; i < orders.size(); i++) {
                     NxDepartmentOrdersEntity order = orders.get(i);
                     Log.d(TAG, "[确认回调] 订单" + (i+1) + "详情: orderId=" + order.getNxDepartmentOrdersId() + 
@@ -595,7 +597,6 @@ public class CustomerStockOutActivity extends AppCompatActivity {
                           ", quantity=" + order.getNxDoQuantity() + 
                           ", goodsName=" + (order.getNxDistributerGoodsEntity() != null ? order.getNxDistributerGoodsEntity().getNxDgGoodsName() : "null"));
                 }
-                
                 if (isPrintMode) {
                     Log.d(TAG, "[确认回调] 打印模式，调用printAndSaveOrders");
                     printAndSaveOrders(orders, 0);
@@ -612,9 +613,6 @@ public class CustomerStockOutActivity extends AppCompatActivity {
             @Override
             public void onDismiss(DialogInterface dialog) {
                 Log.d(TAG, "[日志追踪] StockOutGoodsDialog onDismiss");
-//                determinePrintMode();
-//                updateModeStatus();
-                // 清理弹窗引用
                 currentDialog = null;
                 Log.d(TAG, "[日志追踪] 弹窗对象已清理");
             }
@@ -622,6 +620,107 @@ public class CustomerStockOutActivity extends AppCompatActivity {
         dialog.show();
         Log.d(TAG, "[日志追踪] StockOutGoodsDialog.show() 调用");
         currentDialog = dialog;
+        */
+
+        // 【新增】根据是否有蓝牙称缓存，弹出蓝牙称弹窗或人工输入弹窗
+        boolean scaleCache = hasScaleCache();
+        Log.d(TAG, "[日志追踪] hasScaleCache() 判断结果: " + scaleCache);
+        if (scaleCache) {
+            Log.d(TAG, "[日志追踪] 选择弹出蓝牙称弹窗 StockOutGoodsDialog");
+            StockOutGoodsDialog dialog = new StockOutGoodsDialog(this, goods, isPrintMode);
+            Log.d(TAG, "[日志追踪] StockOutGoodsDialog创建完成");
+            dialog.setOnConfirmListener(orders -> {
+                Log.d(TAG, "[日志追踪] StockOutGoodsDialog 确认回调, 订单数量: " + (orders != null ? orders.size() : 0));
+                if (orders != null && !orders.isEmpty()) {
+                    for (int i = 0; i < orders.size(); i++) {
+                        NxDepartmentOrdersEntity order = orders.get(i);
+                        Log.d(TAG, "[日志追踪] StockOutGoodsDialog 订单" + (i+1) + "详情: orderId=" + order.getNxDepartmentOrdersId() + ", weight=" + order.getNxDoWeight());
+                    }
+                    if (isPrintMode) {
+                        Log.d(TAG, "[日志追踪] StockOutGoodsDialog 打印模式，调用printAndSaveOrders");
+                        printAndSaveOrders(orders, 0);
+                    } else {
+                        Log.d(TAG, "[日志追踪] StockOutGoodsDialog 非打印模式，直接保存订单");
+                        saveOrdersToServer(orders);
+                    }
+                }
+            });
+            dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                @Override
+                public void onDismiss(DialogInterface dialog) {
+                    Log.d(TAG, "[日志追踪] StockOutGoodsDialog onDismiss");
+                    currentDialog = null;
+                }
+            });
+            dialog.show();
+            Log.d(TAG, "[日志追踪] StockOutGoodsDialog.show() 调用");
+            currentDialog = dialog;
+        } else {
+            Log.d(TAG, "[日志追踪] 选择弹出人工输入弹窗 ManualInputDialog");
+            ManualInputDialog dialog = new ManualInputDialog(this, goods, getOrderListForGoods(goods));
+            dialog.setOnConfirmListener(orders -> {
+                Log.d(TAG, "[日志追踪] ManualInputDialog 确认回调, 订单数量: " + (orders != null ? orders.size() : 0));
+                if (orders != null && !orders.isEmpty()) {
+                    for (int i = 0; i < orders.size(); i++) {
+                        NxDepartmentOrdersEntity order = orders.get(i);
+                        Log.d(TAG, "[日志追踪] ManualInputDialog 订单" + (i+1) + "详情: orderId=" + order.getNxDepartmentOrdersId() + ", weight=" + order.getNxDoWeight());
+                    }
+                    if (isPrintMode) {
+                        Log.d(TAG, "[日志追踪] ManualInputDialog 打印模式，调用printAndSaveOrders");
+                        printAndSaveOrders(orders, 0);
+                    } else {
+                        Log.d(TAG, "[日志追踪] ManualInputDialog 非打印模式，直接保存订单");
+                        saveOrdersToServer(orders);
+                    }
+                }
+            });
+            dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                @Override
+                public void onDismiss(DialogInterface dialog) {
+                    Log.d(TAG, "[日志追踪] ManualInputDialog onDismiss");
+                    currentDialog = null;
+                }
+            });
+            dialog.show();
+            Log.d(TAG, "[日志追踪] ManualInputDialog.show() 调用");
+            currentDialog = dialog;
+        }
+    }
+
+    // 【新增】获取当前商品的订单列表（可根据实际业务调整）
+    private List<NxDepartmentOrdersEntity> getOrderListForGoods(NxDistributerGoodsShelfGoodsEntity goods) {
+        // 这里假设商品下有订单列表，实际可根据你的数据结构调整
+        Log.d(TAG, "[日志追踪] getOrderListForGoods called, goods=" + (goods != null ? goods.getNxDistributerGoodsEntity().getNxDgGoodsName() : "null"));
+        
+        List<NxDepartmentOrdersEntity> orders = null;
+        if (goods != null && goods.getNxDistributerGoodsEntity() != null) {
+            orders = goods.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities();
+            Log.d(TAG, "[日志追踪] getOrderListForGoods 从NxDistributerGoodsEntity获取订单: " + (orders != null ? orders.size() : 0));
+        }
+        
+        if (orders == null || orders.isEmpty()) {
+            // 尝试从goods本身获取订单
+            orders = goods.getNxDepartmentOrdersEntities();
+            Log.d(TAG, "[日志追踪] getOrderListForGoods 从goods本身获取订单: " + (orders != null ? orders.size() : 0));
+        }
+        
+        if (orders == null) {
+            orders = new ArrayList<>();
+            Log.d(TAG, "[日志追踪] getOrderListForGoods 创建空订单列表");
+        }
+        
+        Log.d(TAG, "[日志追踪] getOrderListForGoods 最终返回订单数量: " + orders.size());
+        return orders;
+    }
+
+    // 【新增】判断是否有蓝牙称缓存
+    private boolean hasScaleCache() {
+        SharedPreferences sp = getSharedPreferences("scale_cache", MODE_PRIVATE);
+        String scaleAddress = sp.getString("scale_address", null);
+        String scaleName = sp.getString("scale_name", null);
+        boolean result = scaleAddress != null && !scaleAddress.isEmpty() && scaleName != null && !scaleName.isEmpty();
+        Log.d(TAG, "[日志追踪] hasScaleCache() scaleAddress=" + scaleAddress + ", scaleName=" + scaleName + ", result=" + result);
+        return result;
     }
 
     /**

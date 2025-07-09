@@ -11,6 +11,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.swolo.lpy.pysx.R;
 import com.swolo.lpy.pysx.api.OrdersApi;
@@ -34,6 +35,7 @@ import com.swolo.lpy.pysx.main.modal.NxDistributerUserEntity;
 
 public class CustomerListActivity extends AppCompatActivity {
 
+    private SwipeRefreshLayout swipeRefreshLayout;
     private RecyclerView rvCustomers;
     private Button btnNext;
     private CustomerAdapter adapter;
@@ -66,12 +68,32 @@ public class CustomerListActivity extends AppCompatActivity {
         initData();
         setView();
         bindAction();
+        
+        // 初始显示加载动画
+        if (swipeRefreshLayout != null) {
+            swipeRefreshLayout.setRefreshing(true);
+        }
     }
 
     private void initView() {
+        swipeRefreshLayout = findViewById(R.id.swipe_refresh_layout);
         rvCustomers = findViewById(R.id.rv_customers);
         btnNext = findViewById(R.id.btn_next);
         rvCustomers.setLayoutManager(new LinearLayoutManager(this));
+        
+        // 设置下拉刷新
+        swipeRefreshLayout.setColorSchemeResources(android.R.color.holo_blue_bright, 
+            android.R.color.holo_green_light, 
+            android.R.color.holo_orange_light, 
+            android.R.color.holo_red_light);
+        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                Log.d("CustomerList", "下拉刷新触发");
+                // 重新加载数据
+                initData();
+            }
+        });
     }
 
     private void initData() {
@@ -90,12 +112,24 @@ public class CustomerListActivity extends AppCompatActivity {
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe(new Subscriber<WaitStockGoodsDepsResponse>() {
                 @Override
-                public void onCompleted() {}
+                public void onCompleted() {
+                    // 数据加载完成，停止刷新动画
+                    if (swipeRefreshLayout != null) {
+                        swipeRefreshLayout.setRefreshing(false);
+                    }
+                }
 
                 @Override
                 public void onError(Throwable e) {
                     Log.e("CustomerList", "加载客户失败: " + e.getMessage(), e);
                     Toast.makeText(CustomerListActivity.this, "加载客户失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    // 出错时也要停止刷新动画
+                    if (swipeRefreshLayout != null) {
+                        swipeRefreshLayout.setRefreshing(false);
+                    }
+                    // 出错时重置选中状态
+                    selectedIndexes.clear();
+                    btnNext.setVisibility(View.GONE);
                 }
 
                 @Override
@@ -139,6 +173,10 @@ public class CustomerListActivity extends AppCompatActivity {
                             adapter.notifyDataSetChanged();
                             Log.d("CustomerList", "刷新Adapter，客户数=" + customerList.size());
                         }
+                        
+                        // 刷新完成后重置选中状态
+                        selectedIndexes.clear();
+                        btnNext.setVisibility(View.GONE);
                     } else {
                         Log.d("CustomerList", "没有客户数据");
                         Toast.makeText(CustomerListActivity.this, "没有客户数据", Toast.LENGTH_SHORT).show();

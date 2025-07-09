@@ -5,8 +5,6 @@
     android:layout_height="match_parent"
     android:background="#F8FAFC">
 
-
-
     <!-- 搜索框 -->
     <LinearLayout
         android:layout_width="match_parent"
@@ -30,7 +28,6 @@
             android:drawablePadding="8dp"
             android:singleLine="true"
             android:imeOptions="actionSearch"/>
-
     </LinearLayout>
 
     <!-- 部门列表 -->
@@ -80,7 +77,5 @@
             android:textSize="14sp"
             android:textColor="#999999"
             android:gravity="center"/>
-
     </LinearLayout>
-
 </LinearLayout> 

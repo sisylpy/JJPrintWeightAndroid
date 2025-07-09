@@ -14,6 +14,7 @@ import com.swolo.lpy.pysx.R;
 import com.swolo.lpy.pysx.main.fragment.DepOutOrderSimpleTabFragment;
 import com.swolo.lpy.pysx.main.presenter.DepOutOrderPresenter;
 import com.swolo.lpy.pysx.main.modal.DepOutOrderResponse;
+import android.widget.ImageView;
 
 public class DepOutOrderSimpleActivity extends AppCompatActivity implements DepOutOrderPresenter.DepOutOrderView {
     private static final String TAG = "DepOutOrderSimpleActivity";
@@ -33,6 +34,11 @@ public class DepOutOrderSimpleActivity extends AppCompatActivity implements DepO
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dep_out_order);
+        // 顶部导航栏返回按钮点击事件
+        ImageView btnBack = findViewById(R.id.iv_back);
+        if (btnBack != null) {
+            btnBack.setOnClickListener(v -> finish());
+        }
         setTitle("出库商品");
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);

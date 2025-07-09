@@ -25,6 +25,8 @@ import java.util.List;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import android.widget.ImageView;
+import android.view.ViewGroup;
 
 /**
  * 部门列表页面 - 美化版本
@@ -64,7 +66,20 @@ public class DepartmentListActivity extends AppCompatActivity implements MainCon
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_department_list);
+        setContentView(R.layout.layout_base);
+        // 设置顶部栏标题
+        TextView tvTitle = findViewById(R.id.tv_title);
+        if (tvTitle != null) tvTitle.setText("出库部门");
+        // 隐藏右侧所有按钮
+        int[] rightBtnIds = {R.id.btn_more, R.id.btn_circle, R.id.btn_settings, R.id.btn_right};
+        for (int id : rightBtnIds) {
+            View btn = findViewById(id);
+            if (btn != null) btn.setVisibility(View.GONE);
+        }
+        // inflate 内容区
+        View contentContainer = findViewById(R.id.content_container);
+        View content = getLayoutInflater().inflate(R.layout.department_content, (ViewGroup) contentContainer, false);
+        ((ViewGroup) contentContainer).addView(content);
         Log.d(TAG, "onCreate - 部门列表页面启动");
         
         try {
@@ -88,7 +103,11 @@ public class DepartmentListActivity extends AppCompatActivity implements MainCon
     private void initViews() {
         Log.d(TAG, "开始初始化视图组件");
         
-
+        // 返回按钮
+        ImageView btnBack = findViewById(R.id.iv_avatar);
+        if (btnBack != null) {
+            btnBack.setOnClickListener(v -> finishWithResult());
+        }
         
         // 初始化搜索框
         etSearch = findViewById(R.id.et_search);
