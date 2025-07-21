@@ -37,18 +37,37 @@
             android:textSize="14sp"
             android:layout_marginBottom="8dp"/>
 
-        <Button
-            android:id="@+id/btn_printer_connect"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="连接打印机"
-            android:layout_marginBottom="16dp"/>
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp">
 
-        <!-- 蓝牙称连接部分 -->
+            <Button
+                android:id="@+id/btn_printer_connect"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="连接打印机"
+                android:layout_marginEnd="8dp"/>
+
+            <Button
+                android:id="@+id/btn_printer_delete"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="删除打印机"
+                android:background="@android:color/holo_red_light"
+                android:textColor="@android:color/white"
+                android:layout_marginStart="8dp"/>
+
+        </LinearLayout>
+
+        <!-- 蓝牙称配置部分 -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="蓝牙称设置"
+            android:text="蓝牙称配置"
             android:textSize="18sp"
             android:textStyle="bold"
             android:layout_marginBottom="8dp"/>
@@ -57,16 +76,69 @@
             android:id="@+id/tv_scale_status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="状态: 未连接"
+            android:text="状态: 未配置"
             android:textSize="14sp"
             android:layout_marginBottom="8dp"/>
 
-        <Button
-            android:id="@+id/btn_scale_connect"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="连接蓝牙称"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp">
+
+            <Button
+                android:id="@+id/btn_scale_connect"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="配置蓝牙称"
+                android:layout_marginEnd="8dp"/>
+
+            <Button
+                android:id="@+id/btn_scale_delete"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="删除配置"
+                android:background="@android:color/holo_red_light"
+                android:textColor="@android:color/white"
+                android:layout_marginStart="8dp"/>
+
+        </LinearLayout>
+
+        <!-- 打印纸尺寸设置 -->
+        <TextView
+            android:id="@+id/tv_paper_size_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="打印纸尺寸：未设置"
+            android:textSize="16sp"
+            android:padding="12dp"
+            android:background="@android:color/white"
+            android:textColor="#222222"
+            android:drawableEnd="@android:drawable/arrow_down_float"
+            android:gravity="center_vertical"
+            android:clickable="true"
+            android:focusable="true"
             android:layout_marginBottom="16dp"/>
+
+        <!-- 人工输入弹窗屏幕方向设置 -->
+        <TextView
+            android:id="@+id/tv_screen_orientation_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="人工输入弹窗屏幕方向：竖屏"
+            android:textSize="16sp"
+            android:padding="12dp"
+            android:background="@android:color/white"
+            android:textColor="#222222"
+            android:drawableEnd="@android:drawable/arrow_down_float"
+            android:gravity="center_vertical"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_marginBottom="8dp"/>
+
+
 
         <!-- 退出登录按钮 -->
         <Button

@@ -335,6 +335,9 @@ public class StockOutGoodsDialog extends Dialog {
         setContentView(R.layout.dialog_stock_out_goods);
         Log.d(TAG, "[弹窗] onCreate: setContentView完成");
         
+        // 【新增】应用横竖屏设置
+        applyScreenOrientation();
+        
         // 注册广播接收器来接收蓝牙秤重量数据
         Log.d(TAG, "[弹窗] onCreate: 开始注册广播");
         try {
@@ -431,7 +434,7 @@ public class StockOutGoodsDialog extends Dialog {
                 }
                 Log.d(TAG, "[弹窗] 订单重量清空完毕");
                 Log.d(TAG, "[弹窗] 创建订单适配器前: orders hash=" + orders.hashCode());
-                ordersAdapter = new StockOutOrdersAdapter((android.app.Activity) mContext, orders, goodsEntity);
+                ordersAdapter = new StockOutOrdersAdapter((android.app.Activity) mContext, orders, goodsEntity, ordersRecyclerView);
                 Log.d(TAG, "[弹窗] 创建订单适配器后: ordersAdapter hash=" + ordersAdapter.hashCode());
                 ordersRecyclerView.setAdapter(ordersAdapter);
                 Log.d(TAG, "订单适配器设置完成");
@@ -560,6 +563,31 @@ public class StockOutGoodsDialog extends Dialog {
         if (!isInitialized) {
             Log.d(TAG, "[弹窗] setWeight: 初始化未完成，忽略蓝牙秤数据");
             return;
+        }
+        
+        // 防抖机制：如果重量变化很小（小于0.01斤），跳过更新
+        if (ordersAdapter != null && ordersAdapter.getItemCount() > 0) {
+            int selectedPosition = ordersAdapter.getSelectedPosition();
+            if (selectedPosition >= 0 && selectedPosition < ordersAdapter.getOrders().size()) {
+                NxDepartmentOrdersEntity currentOrder = ordersAdapter.getOrders().get(selectedPosition);
+                if (currentOrder != null) {
+                    String currentWeightStr = currentOrder.getNxDoWeight();
+                    if (currentWeightStr != null && !currentWeightStr.isEmpty()) {
+                        try {
+                            double currentWeight = Double.parseDouble(currentWeightStr.replaceAll("[^0-9.]", ""));
+                            double newWeightInJin = weight / 500.0;
+                            double weightDiff = Math.abs(newWeightInJin - currentWeight);
+                            
+                            if (weightDiff < 0.01) {
+                                Log.d(TAG, "[弹窗] setWeight: 重量变化太小，跳过更新: current=" + currentWeight + ", new=" + newWeightInJin + ", diff=" + weightDiff);
+                                return;
+                            }
+                        } catch (NumberFormatException e) {
+                            Log.w(TAG, "[弹窗] setWeight: 解析当前重量失败", e);
+                        }
+                    }
+                }
+            }
         }
         
         // 确保UI更新在主线程中进行
@@ -751,11 +779,14 @@ public class StockOutGoodsDialog extends Dialog {
             final double realWeight = Math.round((rawWeight - tareWeight) * 10) / 10.0;
             Log.d(TAG, "[蓝牙] 收到重量: " + realWeight + "g, 是否稳定: " + isStable);
             
+            // 只有在重量稳定时才更新UI，减少闪烁
             if (isStable) {
                 Log.d(TAG, "[蓝牙] 重量稳定，准备写入输入框");
                 setWeight(realWeight);
+            } else {
+                Log.d(TAG, "[蓝牙] 重量不稳定，跳过UI更新");
             }
-        } else if (data.length >= 4) {
+        } else {
             // 格式2: 尝试解析为简单的重量数据
             Log.d(TAG, "[蓝牙] 尝试格式2解析");
             try {
@@ -773,8 +804,6 @@ public class StockOutGoodsDialog extends Dialog {
             } catch (Exception e) {
                 Log.e(TAG, "[蓝牙] ASCII解析失败", e);
             }
-        } else {
-            Log.d(TAG, "[蓝牙] 数据格式不正确: 长度=" + data.length + ", 数据=" + bytesToHex(data));
         }
     }
 
@@ -974,12 +1003,15 @@ public class StockOutGoodsDialog extends Dialog {
     private void onConfirmClick(List<NxDepartmentOrdersEntity> orders) {
         Log.d(TAG, "[确认按钮] ========== 开始onConfirmClick方法 ==========");
         Log.d(TAG, "[确认按钮] 开始处理订单，当前模式: " + (isPrintMode ? "打印标签" : "非打印标签"));
+        Log.d(TAG, "[确认按钮] ordersAdapter: " + (ordersAdapter != null ? "非空" : "null"));
         
         // 获取当前选中的订单
         NxDepartmentOrdersEntity selectedOrder = null;
         if (ordersAdapter != null) {
             selectedOrder = ordersAdapter.getSelectedOrder();
             Log.d(TAG, "[确认按钮] 获取到选中订单: " + (selectedOrder != null ? "orderId=" + selectedOrder.getNxDepartmentOrdersId() : "null"));
+        } else {
+            Log.e(TAG, "[确认按钮] ordersAdapter为null");
         }
         
         if (selectedOrder == null) {
@@ -990,6 +1022,7 @@ public class StockOutGoodsDialog extends Dialog {
         
         // 验证选中订单的重量数据
         String weight = selectedOrder.getNxDoWeight();
+        Log.d(TAG, "[确认按钮] 选中订单重量: " + weight);
         if (weight == null || weight.isEmpty() || weight.equals("0.00") || weight.equals("0")) {
             Log.e(TAG, "[确认按钮] 选中订单重量无效: " + weight);
             Toast.makeText(getContext(), "请为选中的订单输入重量", Toast.LENGTH_SHORT).show();
@@ -1165,7 +1198,48 @@ public class StockOutGoodsDialog extends Dialog {
         Log.d(TAG, "[刷新页面] ========== refreshPageData方法完成 ==========");
     }
     
-
-    
+    /**
+     * 【新增】应用横竖屏设置
+     */
+    private void applyScreenOrientation() {
+        Log.d(TAG, "[弹窗] applyScreenOrientation: 开始应用横竖屏设置");
+        
+        try {
+            // 读取横竖屏设置
+            SharedPreferences prefs = getContext().getSharedPreferences("settings_prefs", Context.MODE_PRIVATE);
+            int screenOrientation = prefs.getInt("screen_orientation", 0);
+            
+            Log.d(TAG, "[弹窗] applyScreenOrientation: 读取到横竖屏设置: " + screenOrientation);
+            
+            // 获取Activity
+            Activity activity = null;
+            if (mContext instanceof Activity) {
+                activity = (Activity) mContext;
+            }
+            
+            if (activity != null && !activity.isFinishing() && !activity.isDestroyed()) {
+                switch (screenOrientation) {
+                    case 0: // 竖屏
+                        Log.d(TAG, "[弹窗] applyScreenOrientation: 设置为竖屏模式");
+                        activity.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+                        break;
+                    case 1: // 横屏
+                        Log.d(TAG, "[弹窗] applyScreenOrientation: 设置为横屏模式");
+                        activity.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+                        break;
+                    default:
+                        Log.w(TAG, "[弹窗] applyScreenOrientation: 未知的横竖屏设置: " + screenOrientation + "，使用竖屏");
+                        activity.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+                        break;
+                }
+            } else {
+                Log.e(TAG, "[弹窗] applyScreenOrientation: 无法获取Activity实例或Activity已销毁");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "[弹窗] applyScreenOrientation: 应用横竖屏设置失败", e);
+        }
+        
+        Log.d(TAG, "[弹窗] applyScreenOrientation: 横竖屏设置应用完成");
+    }
 
 }

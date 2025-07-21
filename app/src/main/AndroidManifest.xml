@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.swolo.lpy.pysx">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.BLUETOOTH" />
@@ -49,27 +50,32 @@
         <!-- 设置 StockOutActivity 为启动页面 -->
         <activity android:name=".main.StockOutActivity"
             android:label="@string/app_name"
-            android:theme="@style/AppTheme.NoActionBar">
+            android:theme="@style/AppTheme.NoActionBar"
+            android:configChanges="keyboardHidden|orientation|screenSize">
         </activity>
 
         <activity android:name=".main.DepartmentListActivity"
             android:label="部门列表"
-            android:theme="@style/AppTheme.NoActionBar">
+            android:theme="@style/AppTheme.NoActionBar"
+            android:configChanges="keyboardHidden|orientation|screenSize">
         </activity>
 
         <activity android:name=".main.CustomerListActivity"
             android:exported="false"
-            android:theme="@style/AppTheme.NoActionBar">
+            android:theme="@style/AppTheme.NoActionBar"
+            android:configChanges="keyboardHidden|orientation|screenSize">
         </activity>
 
         <activity android:name=".main.CustomerStockOutActivity"
             android:exported="false"
-            android:theme="@style/AppTheme.NoActionBar">
+            android:theme="@style/AppTheme.NoActionBar"
+            android:configChanges="keyboardHidden|orientation|screenSize">
         </activity>
 
         <activity android:name=".main.LoginActivity"
             android:exported="true"
-            android:theme="@style/AppTheme.NoActionBar">
+            android:theme="@style/AppTheme.NoActionBar"
+            android:configChanges="keyboardHidden|orientation|screenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -79,19 +85,23 @@
 
         <activity android:name=".main.SettingsActivity"
             android:label="设置"
-            android:theme="@style/AppTheme.NoActionBar"/>
+            android:theme="@style/AppTheme.NoActionBar"
+            android:configChanges="keyboardHidden|orientation|screenSize"/>
 
         <activity android:name=".main.BluetoothDeviceActivity"
             android:label="蓝牙设备"
-            android:theme="@style/AppTheme"/>
+            android:theme="@style/AppTheme"
+            android:configChanges="keyboardHidden|orientation|screenSize"/>
 
         <activity android:name=".main.ScaleActivity"
             android:label="蓝牙称"
-            android:theme="@style/AppTheme"/>
+            android:theme="@style/AppTheme"
+            android:configChanges="keyboardHidden|orientation|screenSize"/>
 
         <activity android:name=".main.DepOutOrderSimpleActivity"
             android:label="部门出库订单"
-            android:theme="@style/AppTheme.NoActionBar"/>
+            android:theme="@style/AppTheme.NoActionBar"
+            android:configChanges="keyboardHidden|orientation|screenSize"/>
 
     </application>
 

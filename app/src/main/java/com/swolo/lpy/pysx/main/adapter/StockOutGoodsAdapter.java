@@ -57,14 +57,9 @@ public class StockOutGoodsAdapter extends RecyclerView.Adapter<StockOutGoodsAdap
         notifyDataSetChanged();
     }
 
-    private int currentSelectedPosition = -1;
-
     public void updateCurrentItemWeight(double weight) {
-        if (currentSelectedPosition >= 0 && currentSelectedPosition < goodsList.size()) {
-            NxDistributerGoodsShelfGoodsEntity item = goodsList.get(currentSelectedPosition);
-            item.setNxDoWeight(weight);
-            notifyItemChanged(currentSelectedPosition);
-        }
+        // 这个方法暂时保留，但不再使用选中位置
+        Log.d("StockOutGoodsAdapter", "updateCurrentItemWeight被调用，但不再使用选中位置");
     }
 
     @Override
@@ -151,13 +146,19 @@ public class StockOutGoodsAdapter extends RecyclerView.Adapter<StockOutGoodsAdap
             Log.d("StockOutGoodsAdapter", "点击商品: " + goods.getNxDistributerGoodsEntity().getNxDgGoodsName() + 
                   ", 订单数量: " + (goods.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities() != null ? 
                   goods.getNxDistributerGoodsEntity().getNxDepartmentOrdersEntities().size() : 0));
+            
+            // 设置点击时的背景变化
+            holder.itemView.setBackgroundResource(R.drawable.goods_item_selected_bg);
+            
+            // 延迟恢复原背景
+            holder.itemView.postDelayed(() -> {
+                holder.itemView.setBackgroundResource(R.drawable.goods_item_bg);
+            }, 200); // 200ms后恢复
+            
             if (mListener != null) {
                 mListener.onItemClick(goods);
             }
         });
-
-        // 设置选中状态
-        holder.itemView.setSelected(position == currentSelectedPosition);
     }
 
     private View createOrderView(ViewGroup parent, NxDepartmentOrdersEntity order, NxDistributerGoodsShelfGoodsEntity goods) {

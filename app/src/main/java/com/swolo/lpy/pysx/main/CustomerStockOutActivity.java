@@ -62,6 +62,7 @@ import java.util.Map;
 import com.swolo.lpy.pysx.main.modal.NxDepartmentEntity;
 import com.swolo.lpy.pysx.main.modal.GbDepartmentEntity;
 import com.swolo.lpy.pysx.dialog.ManualInputDialog;
+import com.swolo.lpy.pysx.ui.view.CommonLoadingDialog;
 
 /**
  * 客户出库页面 - 核心业务页面
@@ -104,6 +105,7 @@ public class CustomerStockOutActivity extends AppCompatActivity {
     // 包括货架列表、选中状态、客户信息等
     private List<NxDistributerGoodsShelfEntity> shelfList = new ArrayList<>(); // 货架数据列表
     private int selectedShelfIndex = -1; // 当前选中的货架索引
+    private Integer selectedShelfId = null; // 当前选中的货架ID
     private int disId = -1; // 分销商ID，用于API调用
     private String customerName; // 客户名称，支持多客户显示
     private int customerOrderCount; // 客户订单总数
@@ -145,6 +147,7 @@ public class CustomerStockOutActivity extends AppCompatActivity {
     private int reconnectAttempts = 0; // 重连次数统计
     private int id = 0; // 打印机连接ID
     private Handler printerHandler; // 打印机操作的主线程Handler
+    private CommonLoadingDialog mLoadingDialog; // 加载蒙版
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -174,6 +177,9 @@ public class CustomerStockOutActivity extends AppCompatActivity {
             // 初始化打印机 - 异步执行，不阻塞主线程
             printerPreferences = getSharedPreferences("printer_cache", MODE_PRIVATE);
             printerHandler = new Handler(Looper.getMainLooper());
+            
+            // 初始化加载蒙版
+            mLoadingDialog = new CommonLoadingDialog(this);
             
             // 异步连接打印机，避免阻塞主线程
             new Thread(() -> {
@@ -305,9 +311,38 @@ public class CustomerStockOutActivity extends AppCompatActivity {
         
         // 设置RecyclerView
         rvShelf.setLayoutManager(new LinearLayoutManager(this));
-        rvGoods.setLayoutManager(new LinearLayoutManager(this));
+        
+        // 根据屏幕方向设置商品列表的布局管理器
+        int orientation = getResources().getConfiguration().orientation;
+        if (orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) {
+            // 横屏时使用2列网格布局
+            rvGoods.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(this, 2));
+            Log.d(TAG, "[UI] 横屏模式，使用2列网格布局");
+        } else {
+            // 竖屏时使用单列布局
+            rvGoods.setLayoutManager(new LinearLayoutManager(this));
+            Log.d(TAG, "[UI] 竖屏模式，使用单列布局");
+        }
         
         Log.d(TAG, "[UI] UI组件初始化完成");
+    }
+
+    /**
+     * 根据屏幕方向更新布局管理器
+     */
+    private void updateLayoutManager() {
+        if (rvGoods != null) {
+            int orientation = getResources().getConfiguration().orientation;
+            if (orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) {
+                // 横屏时使用2列网格布局
+                rvGoods.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(this, 2));
+                Log.d(TAG, "[UI] 横屏模式，使用2列网格布局");
+            } else {
+                // 竖屏时使用单列布局
+                rvGoods.setLayoutManager(new LinearLayoutManager(this));
+                Log.d(TAG, "[UI] 竖屏模式，使用单列布局");
+            }
+        }
     }
 
     /**
@@ -390,6 +425,7 @@ public class CustomerStockOutActivity extends AppCompatActivity {
         
         if (nxDepIdsStr.isEmpty() && gbDepIdsStr.isEmpty()) {
             Log.w(TAG, "[数据] 没有选中的客户，显示空状态");
+            hideLoading();
             showEmptyState();
             return;
         }
@@ -434,8 +470,8 @@ public class CustomerStockOutActivity extends AppCompatActivity {
             }
         }
         
-        // 显示加载状态
-        Toast.makeText(this, "获取数据中...", Toast.LENGTH_SHORT).show();
+        // 显示加载蒙版
+        showLoading();
         
         // 调用接口获取数据，参数格式与小程序完全一致
         GoodsApi api = HttpManager.getInstance().getApi(GoodsApi.class);
@@ -448,11 +484,13 @@ public class CustomerStockOutActivity extends AppCompatActivity {
                     @Override
                     public void onCompleted() {
                         Log.d(TAG, "[接口] stockerGetToStockGoodsWithDepIdsKf 请求完成");
+                        hideLoading();
                     }
 
                     @Override
                     public void onError(Throwable e) {
                         Log.e(TAG, "[接口] stockerGetToStockGoodsWithDepIdsKf 请求失败", e);
+                        hideLoading();
                         Toast.makeText(CustomerStockOutActivity.this, 
                                 "获取数据失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                         showEmptyState();
@@ -490,26 +528,58 @@ public class CustomerStockOutActivity extends AppCompatActivity {
         
         // 设置货架适配器
         if (rvShelf != null) {
-        StockOutShelfAdapter shelfAdapter = new StockOutShelfAdapter();
-        shelfAdapter.setData(shelfList);
+            StockOutShelfAdapter shelfAdapter = new StockOutShelfAdapter();
+            shelfAdapter.setData(shelfList);
             rvShelf.setLayoutManager(new LinearLayoutManager(this));
             rvShelf.setAdapter(shelfAdapter);
+            
+            // 设置货架选中状态
+            if (selectedShelfIndex >= 0 && selectedShelfIndex < shelfList.size()) {
+                shelfAdapter.setSelectedPosition(selectedShelfIndex);
+                Log.d(TAG, "[UI] 设置货架适配器选中位置: " + selectedShelfIndex);
+            }
             
             // 设置货架点击事件
         shelfAdapter.setOnItemClickListener(new StockOutShelfAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(NxDistributerGoodsShelfEntity entity) {
                 selectedShelfIndex = shelfList.indexOf(entity);
-                    updateGoodsList();
+                selectedShelfId = entity.getNxDistributerGoodsShelfId();
+                Log.d(TAG, "[货架点击] 选中货架: index=" + selectedShelfIndex + ", id=" + selectedShelfId + ", name=" + entity.getNxDistributerGoodsShelfName());
+                updateGoodsList();
             }
         });
         
             Log.d(TAG, "[UI] 货架适配器设置完成，共 " + shelfList.size() + " 个货架");
         }
         
-        // 如果有货架数据，默认选中第一个
+        // 如果有货架数据，根据记录的货架ID选中对应货架
         if (!shelfList.isEmpty()) {
-            selectedShelfIndex = 0;
+            if (selectedShelfId != null) {
+                // 根据记录的货架ID查找对应的货架
+                int targetIndex = -1;
+                for (int i = 0; i < shelfList.size(); i++) {
+                    if (selectedShelfId.equals(shelfList.get(i).getNxDistributerGoodsShelfId())) {
+                        targetIndex = i;
+                        break;
+                    }
+                }
+                
+                if (targetIndex >= 0) {
+                    selectedShelfIndex = targetIndex;
+                    Log.d(TAG, "[UI] 根据货架ID选中货架: id=" + selectedShelfId + ", index=" + selectedShelfIndex + ", name=" + shelfList.get(selectedShelfIndex).getNxDistributerGoodsShelfName());
+                } else {
+                    // 如果找不到对应的货架ID，默认选中第一个
+                    selectedShelfIndex = 0;
+                    selectedShelfId = shelfList.get(0).getNxDistributerGoodsShelfId();
+                    Log.d(TAG, "[UI] 未找到记录的货架ID，默认选中第一个货架: id=" + selectedShelfId + ", index=" + selectedShelfIndex);
+                }
+            } else {
+                // 第一次加载，默认选中第一个货架
+                selectedShelfIndex = 0;
+                selectedShelfId = shelfList.get(0).getNxDistributerGoodsShelfId();
+                Log.d(TAG, "[UI] 首次加载，默认选中第一个货架: id=" + selectedShelfId + ", index=" + selectedShelfIndex);
+            }
             updateGoodsList();
         }
         
@@ -534,7 +604,7 @@ public class CustomerStockOutActivity extends AppCompatActivity {
         if (rvGoods != null) {
             StockOutGoodsAdapter goodsAdapter = new StockOutGoodsAdapter();
             goodsAdapter.setGoodsList(goodsList != null ? goodsList : new ArrayList<>());
-            rvGoods.setLayoutManager(new LinearLayoutManager(this));
+            
             rvGoods.setAdapter(goodsAdapter);
         
         // 设置商品点击事件
@@ -577,9 +647,14 @@ public class CustomerStockOutActivity extends AppCompatActivity {
      */
     private void showStockOutDialog(NxDistributerGoodsShelfGoodsEntity goods) {
         Log.d(TAG, "[日志追踪] showStockOutDialog called, goods=" + goods.getNxDistributerGoodsEntity().getNxDgGoodsName());
-        refreshStockOutMode();
-        Log.d(TAG, "[日志追踪] 当前出库模式: " + (isPrintMode ? "打印标签" : "非打印标签"));
-        Log.d(TAG, "[日志追踪] 开始创建出库弹窗判断");
+        try {
+            refreshStockOutMode();
+            Log.d(TAG, "[日志追踪] 当前出库模式: " + (isPrintMode ? "打印标签" : "非打印标签"));
+            Log.d(TAG, "[日志追踪] 开始创建出库弹窗判断");
+        } catch (Exception e) {
+            Log.e(TAG, "[日志追踪] showStockOutDialog 异常: " + e.getMessage(), e);
+            return;
+        }
 
         // 【屏蔽】原有仅弹出蓝牙称弹窗的实现，保留以便随时恢复
         /*
@@ -776,6 +851,13 @@ public class CustomerStockOutActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         Log.d(TAG, "[生命周期] onDestroy");
+    }
+
+    @Override
+    public void onConfigurationChanged(android.content.res.Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        Log.d(TAG, "[UI] 屏幕方向变化: " + newConfig.orientation);
+        updateLayoutManager();
     }
     
     @Override
@@ -1450,61 +1532,185 @@ public class CustomerStockOutActivity extends AppCompatActivity {
             LabelCommand tsc = new LabelCommand();
             Log.d(TAG, "创建LabelCommand对象成功");
             
-            // 设置标签参数
-            tsc.addSize(50, 80);
+            // ========== 纸张尺寸自动映射 ========== 
+            // index: 0,1,2,3
+            int[][] PAPER_SIZE_CM = {
+                {4, 3}, // 4×3cm 横
+                {6, 4}, // 6×4cm 横
+                {4, 6}, // 4×6cm 竖
+                {5, 8}  // 5×8cm 竖
+            };
+            String[] PAPER_SIZE_OPTIONS = {
+                "4×3cm（横）",
+                "6×4cm（横）",
+                "4×6cm（竖）",
+                "5×8cm（竖）"
+            };
+            SharedPreferences prefs = getSharedPreferences("settings_prefs", MODE_PRIVATE);
+            int paperSizeIndex = prefs.getInt("paper_size", 0);
+            int widthCm = PAPER_SIZE_CM[paperSizeIndex][0];
+            int heightCm = PAPER_SIZE_CM[paperSizeIndex][1];
+            int widthMm = widthCm * 10;
+            int heightMm = heightCm * 10;
+            String paperSizeText = PAPER_SIZE_OPTIONS[paperSizeIndex];
+            Log.i(TAG, "【打印尺寸选择】index=" + paperSizeIndex + ", 选项=" + paperSizeText + ", width=" + widthCm + "cm, height=" + heightCm + "cm, width=" + widthMm + "mm, height=" + heightMm + "mm");
+            // ========== END ========== 
+
+            // 新增：根据设置自动传递纸张尺寸（单位mm）
+            tsc.addSize(widthMm, heightMm);
             tsc.addGap(10);
             tsc.addDirection(LabelCommand.DIRECTION.FORWARD, LabelCommand.MIRROR.NORMAL);
             tsc.addReference(0, 0);
             tsc.addCls();
             Log.d(TAG, "设置标签参数成功");
             
-            // 部门名称
-            String departmentName = getDepartmentName(order);
-            Log.d(TAG, "部门名称: " + departmentName);
-            tsc.addText(50, 550, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, 
-                LabelCommand.ROTATION.ROTATION_270, LabelCommand.FONTMUL.MUL_2, 
-                LabelCommand.FONTMUL.MUL_2, departmentName);
-            
-            // 商品信息
-            String goodsName = order.getNxDistributerGoodsEntity() != null ? 
-                order.getNxDistributerGoodsEntity().getNxDgGoodsName() : "";
-            String standardName = order.getNxDistributerGoodsEntity() != null ? 
-                order.getNxDistributerGoodsEntity().getNxDgGoodsStandardname() : "";
-            String weight = order.getNxDoWeight() != null ? order.getNxDoWeight() : "0";
-            String standard = order.getNxDoStandard() != null ? order.getNxDoStandard() : "";
-            Log.d(TAG, "商品信息: " + goodsName + ", 规格: " + standardName + ", 数量: " + weight);
-            
-            tsc.addText(120, 550, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, 
-                LabelCommand.ROTATION.ROTATION_270, LabelCommand.FONTMUL.MUL_2, 
-                LabelCommand.FONTMUL.MUL_2, goodsName + " " + weight + standard);
-            
-            // 订货信息
-            String orderQuantity = order.getNxDoQuantity() != null ? order.getNxDoQuantity().toString() : "0";
-            String orderStandard = order.getNxDoStandard() != null ? order.getNxDoStandard() : "";
-            Log.d(TAG, "订货数量: " + orderQuantity);
-            tsc.addText(190, 550, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, 
-                LabelCommand.ROTATION.ROTATION_270, LabelCommand.FONTMUL.MUL_2, 
-                LabelCommand.FONTMUL.MUL_2, "订货: " + orderQuantity + orderStandard);
-            
-            // 备注
-            String remark = order.getNxDoRemark();
-            if (remark != null && !remark.isEmpty()) {
-                Log.d(TAG, "备注: " + remark);
-                tsc.addText(260, 550, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, 
-                    LabelCommand.ROTATION.ROTATION_270, LabelCommand.FONTMUL.MUL_1, 
-                    LabelCommand.FONTMUL.MUL_1, "备注: " + remark);
+            // ========== 方案A：参数表 + 横竖版分支 ==========
+            class PrintLayoutParams {
+                int xCustomer, yCustomer, fontCustomer;
+                int xGoods, yGoods, fontGoods;
+                int xQty, yQty, fontQty;
+                LabelCommand.ROTATION rotation;
+                PrintLayoutParams(int xC, int yC, int fC, int xG, int yG, int fG, int xQ, int yQ, int fQ, LabelCommand.ROTATION rot) {
+                    xCustomer = xC; yCustomer = yC; fontCustomer = fC;
+                    xGoods = xG; yGoods = yG; fontGoods = fG;
+                    xQty = xQ; yQty = yQ; fontQty = fQ;
+                    rotation = rot;
+                }
             }
+            PrintLayoutParams[] LAYOUT_PARAMS = new PrintLayoutParams[] {
+                    // 4×3cm 横 - 小尺寸，紧凑布局
+                    new PrintLayoutParams(10, 60, 1, 10, 100, 1, 10, 140, 1, LabelCommand.ROTATION.ROTATION_0),
+                    // 6×4cm 横 - 中等尺寸，标准布局
+                    new PrintLayoutParams(80, 150, 2, 80, 250, 2, 80, 350, 2, LabelCommand.ROTATION.ROTATION_0),
+                    // 4×6cm 竖 - 竖版，垂直布局
+                    new PrintLayoutParams(40, 440, 2, 120, 440, 2, 200, 440, 2, LabelCommand.ROTATION.ROTATION_270),
+                    // 5×8cm 竖 - 大尺寸，宽松布局
+                    new PrintLayoutParams(150, 60, 3, 300, 60, 3, 450, 60, 3, LabelCommand.ROTATION.ROTATION_270),
+            };
+            PrintLayoutParams params = LAYOUT_PARAMS[paperSizeIndex];
+            Log.i(TAG, "【打印布局参数】index=" + paperSizeIndex + ", xCustomer=" + params.xCustomer + ", yCustomer=" + params.yCustomer + ", fontCustomer=" + params.fontCustomer + ", rotation=" + params.rotation);
+            Log.i(TAG, "【打印布局参数】xGoods=" + params.xGoods + ", yGoods=" + params.yGoods + ", fontGoods=" + params.fontGoods);
+            Log.i(TAG, "【打印布局参数】xQty=" + params.xQty + ", yQty=" + params.yQty + ", fontQty=" + params.fontQty);
+            // ========== END ==========
+
+            // ========== 新打印内容（客户、商品、重量） ==========
+            String customerName = getDepartmentName(order);
+            String goodsName = order.getNxDistributerGoodsEntity() != null ? order.getNxDistributerGoodsEntity().getNxDgGoodsName() : "";
+            String standard = order.getNxDistributerGoodsEntity() != null ? order.getNxDistributerGoodsEntity().getNxDgGoodsStandardname() : "";
+            String weight = order.getNxDoWeight() != null ? order.getNxDoWeight() : "0";
+            String weightStandard = order.getNxDoStandard() != null ? order.getNxDoStandard() : "";
             
+            Log.i(TAG, "【打印内容】客户: " + customerName);
+            Log.i(TAG, "【打印内容】商品: " + goodsName);
+            Log.i(TAG, "【打印内容】重量: " + weight + weightStandard);
+            
+            // 获取字体倍数枚举
+            LabelCommand.FONTMUL customerFont = params.fontCustomer == 1 ? LabelCommand.FONTMUL.MUL_1 :
+                                             params.fontCustomer == 2 ? LabelCommand.FONTMUL.MUL_2 :
+                                             params.fontCustomer == 3 ? LabelCommand.FONTMUL.MUL_3 :
+                                             params.fontCustomer == 4 ? LabelCommand.FONTMUL.MUL_4 : LabelCommand.FONTMUL.MUL_1;
+            LabelCommand.FONTMUL goodsFont = params.fontGoods == 1 ? LabelCommand.FONTMUL.MUL_1 :
+                                           params.fontGoods == 2 ? LabelCommand.FONTMUL.MUL_2 :
+                                           params.fontGoods == 3 ? LabelCommand.FONTMUL.MUL_3 :
+                                           params.fontGoods == 4 ? LabelCommand.FONTMUL.MUL_4 : LabelCommand.FONTMUL.MUL_1;
+            LabelCommand.FONTMUL weightFont = params.fontQty == 1 ? LabelCommand.FONTMUL.MUL_1 :
+                                            params.fontQty == 2 ? LabelCommand.FONTMUL.MUL_2 :
+                                            params.fontQty == 3 ? LabelCommand.FONTMUL.MUL_3 :
+                                            params.fontQty == 4 ? LabelCommand.FONTMUL.MUL_4 : LabelCommand.FONTMUL.MUL_1;
+            
+            Log.d(TAG, "【打印调试】客户文本位置: x=" + params.xCustomer + ", y=" + params.yCustomer + ", 字体=" + params.fontCustomer);
+            tsc.addText(params.xCustomer, params.yCustomer, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE,
+                    params.rotation, customerFont, customerFont, customerName);
+            
+            Log.d(TAG, "【打印调试】商品文本位置: x=" + params.xGoods + ", y=" + params.yGoods + ", 字体=" + params.fontGoods);
+            tsc.addText(params.xGoods, params.yGoods, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE,
+                    params.rotation, goodsFont, goodsFont, goodsName);
+            
+            // 添加重量打印
+            Log.d(TAG, "【打印调试】重量文本位置: x=" + params.xQty + ", y=" + (params.yQty + 20) + ", 字体=" + params.fontQty);
+            tsc.addText(params.xQty, params.yQty + 20, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE,
+                    params.rotation, weightFont, weightFont, "重量: " + weight + weightStandard);
+            
+            // 添加打印命令和声音命令
+            Log.d(TAG, "【打印调试】添加打印命令: addPrint(1, 1)");
             tsc.addPrint(1, 1);
+            Log.d(TAG, "【打印调试】添加声音命令: addSound(2, 100)");
             tsc.addSound(2, 100);
-            tsc.addCashdrwer(LabelCommand.FOOT.F5, 255, 255);
             
+            // 检查标签尺寸和坐标范围
+            Log.d(TAG, "【打印调试】标签尺寸检查: width=" + widthMm + "mm, height=" + heightMm + "mm");
+            Log.d(TAG, "【打印调试】坐标范围检查:");
+            Log.d(TAG, "  - 客户文本: x=" + params.xCustomer + ", y=" + params.yCustomer + " (应在0-" + widthMm + "范围内)");
+            Log.d(TAG, "  - 商品文本: x=" + params.xGoods + ", y=" + params.yGoods + " (应在0-" + widthMm + "范围内)");
+            Log.d(TAG, "  - 重量文本: x=" + params.xQty + ", y=" + (params.yQty + 20) + " (应在0-" + widthMm + "范围内)");
+            
+            // 检查文本内容长度
+            Log.d(TAG, "【打印调试】文本内容检查:");
+            Log.d(TAG, "  - 客户文本长度: " + customerName.length() + " 字符");
+            Log.d(TAG, "  - 商品文本长度: " + goodsName.length() + " 字符");
+            Log.d(TAG, "  - 重量文本长度: " + ("重量: " + weight + weightStandard).length() + " 字符");
+            
+            // 检查字体设置
+            Log.d(TAG, "【打印调试】字体设置检查:");
+            Log.d(TAG, "  - 客户字体: MUL_" + params.fontCustomer);
+            Log.d(TAG, "  - 商品字体: MUL_" + params.fontGoods);
+            Log.d(TAG, "  - 重量字体: MUL_" + params.fontQty);
+            Log.d(TAG, "  - 旋转角度: " + params.rotation);
+            // ========== END ==========
+
             Log.d(TAG, "获取打印命令数据");
             Vector<Byte> datas = tsc.getCommand();
             if (datas == null || datas.isEmpty()) {
                 throw new Exception("生成的打印命令数据为空");
             }
             Log.d(TAG, "打印命令数据大小: " + datas.size());
+            
+            // 检查坐标是否在合理范围内
+            if (params.xCustomer < 0 || params.xCustomer > widthMm || 
+                params.yCustomer < 0 || params.yCustomer > heightMm) {
+                Log.w(TAG, "【打印警告】客户文本坐标超出范围: x=" + params.xCustomer + ", y=" + params.yCustomer);
+            }
+            if (params.xGoods < 0 || params.xGoods > widthMm || 
+                params.yGoods < 0 || params.yGoods > heightMm) {
+                Log.w(TAG, "【打印警告】商品文本坐标超出范围: x=" + params.xGoods + ", y=" + params.yGoods);
+            }
+            if (params.xQty < 0 || params.xQty > widthMm || 
+                (params.yQty + 20) < 0 || (params.yQty + 20) > heightMm) {
+                Log.w(TAG, "【打印警告】重量文本坐标超出范围: x=" + params.xQty + ", y=" + (params.yQty + 20));
+            }
+            
+            // 添加打印命令调试信息
+            Log.d(TAG, "【打印调试】打印份数: 1");
+            Log.d(TAG, "【打印调试】打印命令: addPrint(1, 1)");
+            Log.d(TAG, "【打印调试】声音命令: addSound(2, 100)");
+            
+            // 转换Byte[]为byte[]用于调试
+            Byte[] byteArray = datas.toArray(new Byte[0]);
+            byte[] primitiveByteArray = new byte[byteArray.length];
+            for (int i = 0; i < byteArray.length; i++) {
+                primitiveByteArray[i] = byteArray[i];
+            }
+            Log.d(TAG, "【打印调试】数据前10字节: " + bytesToHex(Arrays.copyOf(primitiveByteArray, Math.min(10, datas.size()))));
+            
+            // 检查数据完整性
+            Log.d(TAG, "【打印调试】数据完整性检查:");
+            Log.d(TAG, "  - 数据是否为null: " + (datas == null));
+            Log.d(TAG, "  - 数据是否为空: " + (datas != null && datas.isEmpty()));
+            Log.d(TAG, "  - 数据大小: " + (datas != null ? datas.size() : "null"));
+            
+            // 检查是否包含关键命令
+            Byte[] commandByteArray = datas.toArray(new Byte[0]);
+            boolean hasPrintCommand = false;
+            boolean hasSoundCommand = false;
+            for (int i = 0; i < Math.min(commandByteArray.length, 50); i++) {
+                if (commandByteArray[i] == 0x1A) { // 打印命令
+                    hasPrintCommand = true;
+                }
+                if (commandByteArray[i] == 0x07) { // 声音命令
+                    hasSoundCommand = true;
+                }
+            }
+            Log.d(TAG, "【打印调试】命令检查: 包含打印命令=" + hasPrintCommand + ", 包含声音命令=" + hasSoundCommand);
             
             sendPrintData(datas, callback);
         } catch (Exception e) {
@@ -1755,6 +1961,34 @@ public class CustomerStockOutActivity extends AppCompatActivity {
     }
 
     /**
+     * 显示加载蒙版
+     */
+    private void showLoading() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (mLoadingDialog != null && !mLoadingDialog.isShowing()) {
+                    mLoadingDialog.show();
+                }
+            }
+        });
+    }
+
+    /**
+     * 隐藏加载蒙版
+     */
+    private void hideLoading() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (mLoadingDialog != null && mLoadingDialog.isShowing()) {
+                    mLoadingDialog.dismiss();
+                }
+            }
+        });
+    }
+
+    /**
      * 【业务核心】打印回调接口 - 严禁删除或修改
      * 
      * 【功能说明】
@@ -1998,14 +2232,9 @@ public class CustomerStockOutActivity extends AppCompatActivity {
     public void saveOrdersToServer(List<NxDepartmentOrdersEntity> orders) {
         Log.d(TAG, "[网络] 开始保存订单数据到服务器，订单数量: " + orders.size());
         
-        // 显示加载提示 - 确保在主线程中显示
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(CustomerStockOutActivity.this, "正在保存数据...", Toast.LENGTH_SHORT).show();
-            }
-        });
-        Log.d(TAG, "[网络] 显示'正在保存数据...'提示");
+        // 显示加载蒙版
+        showLoading();
+        Log.d(TAG, "[网络] 显示加载蒙版");
         
         // 处理订单数据，确保重量是纯数字格式
         for (NxDepartmentOrdersEntity order : orders) {
@@ -2046,6 +2275,7 @@ public class CustomerStockOutActivity extends AppCompatActivity {
             @Override
                 public void onCompleted() {
                     Log.d(TAG, "[网络] API调用完成");
+                    hideLoading();
                     Log.d(TAG, "[网络] 开始刷新UI...");
                     }
                     
@@ -2053,6 +2283,7 @@ public class CustomerStockOutActivity extends AppCompatActivity {
                 public void onError(Throwable e) {
                     Log.e(TAG, "[网络] 保存失败: " + e.getMessage());
                     Log.e(TAG, "[网络] 错误详情: ", e);
+                    hideLoading();
                     runOnUiThread(new Runnable() {
             @Override
                         public void run() {

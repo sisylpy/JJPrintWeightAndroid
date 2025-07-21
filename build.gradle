@@ -7,35 +7,34 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.6.0'
+        classpath 'com.android.tools.build:gradle:4.2.2'
         
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }
+}
 
-    buildscript {
-
-
-        subprojects {
-            project.configurations.configureEach {
-                resolutionStrategy.eachDependency { details ->
-                    if (details.requested.group == 'com.android.support'
-                            && !details.requested.name.contains('multidex') ) {
-                        details.useVersion "26.0.0"
-                    }
-                }
+subprojects {
+    project.configurations.configureEach {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'com.android.support'
+                    && !details.requested.name.contains('multidex') ) {
+                details.useVersion "26.0.0"
             }
         }
-
     }
-
 }
 
 allprojects {
     repositories {
         google()
         mavenCentral()
+    }
+    
+    tasks.withType(JavaCompile) {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
 }
 

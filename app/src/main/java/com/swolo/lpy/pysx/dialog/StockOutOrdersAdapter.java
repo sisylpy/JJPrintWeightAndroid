@@ -36,6 +36,7 @@ public class StockOutOrdersAdapter extends RecyclerView.Adapter<StockOutOrdersAd
     private List<NxDepartmentOrdersEntity> ordersList;
     private NxDistributerGoodsShelfGoodsEntity goods;
     private Activity activity;
+    private RecyclerView recyclerView; // 添加RecyclerView引用
     private int currentPosition = -1;
     private int selectedPosition = 0; // 当前选中的订单位置，默认选中第一个
     // ========== 稳定状态Map已屏蔽（2025-07-08）==========
@@ -44,12 +45,13 @@ public class StockOutOrdersAdapter extends RecyclerView.Adapter<StockOutOrdersAd
     // private final Map<Integer, Boolean> stableStateMap = new java.util.HashMap<>();
     // ========== 稳定状态Map屏蔽结束 ==========
 
-    public StockOutOrdersAdapter(Activity activity, List<NxDepartmentOrdersEntity> ordersList, NxDistributerGoodsShelfGoodsEntity goods) {
+    public StockOutOrdersAdapter(Activity activity, List<NxDepartmentOrdersEntity> ordersList, NxDistributerGoodsShelfGoodsEntity goods, RecyclerView recyclerView) {
         this.activity = activity;
         this.ordersList = ordersList;
         this.goods = goods;
+        this.recyclerView = recyclerView;
         this.selectedPosition = 0; // 默认选中第一个订单
-        Log.d("StockOutOrdersAdapter", "[适配器] 构造函数: ordersList hash=" + (ordersList != null ? ordersList.hashCode() : 0) + ", size=" + (ordersList != null ? ordersList.size() : 0));
+        Log.d("StockOutOrdersAdapter", "[适配器] 构造函数: ordersList.size=" + (ordersList != null ? ordersList.size() : 0));
     }
 
     @Override
@@ -117,7 +119,11 @@ public class StockOutOrdersAdapter extends RecyclerView.Adapter<StockOutOrdersAd
         // 设置出库数量 - 修复初始重量显示问题
         String weightStr = "";
         if (order != null && order.getNxDoWeight() != null && !order.getNxDoWeight().isEmpty()) {
-            weightStr = order.getNxDoWeight();
+            // 确保重量是纯数字格式，去掉可能的单位
+            weightStr = order.getNxDoWeight().replaceAll("[^0-9.]", "");
+            if (weightStr.isEmpty()) {
+                weightStr = "";
+            }
         } else {
             // 如果订单没有重量数据，设置为空而不是0
             weightStr = "";
@@ -126,7 +132,7 @@ public class StockOutOrdersAdapter extends RecyclerView.Adapter<StockOutOrdersAd
         holder.outQuantity.setText(weightStr);
         Log.d("StockOutOrdersAdapter", "[适配器] setText后: position=" + position + ", EditText内容=" + holder.outQuantity.getText().toString());
         
-        // 新建TextWatcher
+        // 新建TextWatcher - 优化版本，减少不必要的更新
         TextWatcher watcher = new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -139,12 +145,22 @@ public class StockOutOrdersAdapter extends RecyclerView.Adapter<StockOutOrdersAd
                 
                 String weight = s.toString();
                 Log.d("StockOutOrdersAdapter", "[适配器] afterTextChanged: position=" + currentPosition + ", s=" + weight);
+                
                 // 只有和原内容不一样才写回去，防止setText死循环和内容被覆盖
                 if (currentPosition >= 0 && currentPosition < ordersList.size()) {
                     NxDepartmentOrdersEntity currentOrder = ordersList.get(currentPosition);
-                    if (currentOrder != null && !weight.equals(currentOrder.getNxDoWeight())) {
-                        Log.d("StockOutOrdersAdapter", "[适配器] afterTextChanged: 赋值新重量, position=" + currentPosition + ", newWeight=" + weight);
-                        currentOrder.setNxDoWeight(weight);
+                    if (currentOrder != null) {
+                        String currentWeight = currentOrder.getNxDoWeight();
+                        // 确保比较的是纯数字格式
+                        String cleanCurrentWeight = currentWeight != null ? currentWeight.replaceAll("[^0-9.]", "") : "";
+                        String cleanNewWeight = weight.replaceAll("[^0-9.]", "");
+                        
+                        if (!cleanNewWeight.equals(cleanCurrentWeight)) {
+                            Log.d("StockOutOrdersAdapter", "[适配器] afterTextChanged: 赋值新重量, position=" + currentPosition + ", oldWeight=" + cleanCurrentWeight + ", newWeight=" + cleanNewWeight);
+                            currentOrder.setNxDoWeight(cleanNewWeight);
+                        } else {
+                            Log.d("StockOutOrdersAdapter", "[适配器] afterTextChanged: 重量未变化，跳过更新");
+                        }
                     }
                 }
             }
@@ -285,26 +301,69 @@ public class StockOutOrdersAdapter extends RecyclerView.Adapter<StockOutOrdersAd
                 String oldWeight = order.getNxDoWeight();
                 Log.d("StockOutOrdersAdapter", "[适配器] 订单原重量: " + oldWeight);
                 
+                // 修复：确保重量是纯数字，避免重复显示
                 double weightInJin = weight / 500.0;  // 将克转换为斤
-                String newWeight = String.format("%.2f", weightInJin); // 去掉"斤"单位，只保留数字
+                String newWeight = String.format("%.2f", weightInJin); // 只保留数字，不添加单位
                 Log.d("StockOutOrdersAdapter", "[适配器] 重量转换: " + weight + "g -> " + weightInJin + " -> " + newWeight);
                 
-                Log.d("StockOutOrdersAdapter", "[适配器] 开始设置订单新重量");
-                order.setNxDoWeight(newWeight);
-                Log.d("StockOutOrdersAdapter", "[适配器] 订单重量设置完成: " + newWeight);
+                // 更严格的防抖检查：如果重量变化很小，跳过更新
+                if (oldWeight != null && !oldWeight.isEmpty()) {
+                    try {
+                        String cleanOldWeight = oldWeight.replaceAll("[^0-9.]", "");
+                        if (!cleanOldWeight.isEmpty()) {
+                            double oldWeightValue = Double.parseDouble(cleanOldWeight);
+                            double weightDiff = Math.abs(weightInJin - oldWeightValue);
+                            
+                            if (weightDiff < 0.01) {
+                                Log.d("StockOutOrdersAdapter", "[适配器] 重量变化太小，跳过更新: oldWeight=" + oldWeightValue + ", newWeight=" + weightInJin + ", diff=" + weightDiff);
+                                return;
+                            }
+                        }
+                    } catch (NumberFormatException e) {
+                        Log.w("StockOutOrdersAdapter", "[适配器] 解析原重量失败", e);
+                    }
+                }
                 
-                // 使用notifyItemChanged而不是notifyDataSetChanged，避免重新绑定所有视图
-                if (activity != null) {
-                    Log.d("StockOutOrdersAdapter", "[适配器] activity不为空，在主线程中刷新UI");
-                    activity.runOnUiThread(() -> {
-                        Log.d("StockOutOrdersAdapter", "[适配器] 主线程中调用notifyItemChanged");
+                // 检查重量是否真的发生了变化
+                if (!newWeight.equals(oldWeight)) {
+                    Log.d("StockOutOrdersAdapter", "[适配器] 重量发生变化，开始设置订单新重量");
+                    order.setNxDoWeight(newWeight);
+                    Log.d("StockOutOrdersAdapter", "[适配器] 订单重量设置完成: " + newWeight);
+                    
+                    // 直接更新输入框内容，避免重新绑定整个ViewHolder
+                    if (activity != null) {
+                        Log.d("StockOutOrdersAdapter", "[适配器] activity不为空，在主线程中直接更新输入框");
+                        activity.runOnUiThread(() -> {
+                            // 找到对应的ViewHolder并直接更新输入框
+                            RecyclerView.ViewHolder holder = recyclerView.findViewHolderForAdapterPosition(position);
+                            if (holder instanceof InnerHolder) {
+                                InnerHolder innerHolder = (InnerHolder) holder;
+                                // 临时移除TextWatcher，避免触发afterTextChanged
+                                if (innerHolder.outQuantity.getTag() instanceof TextWatcher) {
+                                    innerHolder.outQuantity.removeTextChangedListener((TextWatcher) innerHolder.outQuantity.getTag());
+                                }
+                                
+                                // 直接设置文本
+                                innerHolder.outQuantity.setText(newWeight);
+                                
+                                // 重新添加TextWatcher
+                                if (innerHolder.outQuantity.getTag() instanceof TextWatcher) {
+                                    innerHolder.outQuantity.addTextChangedListener((TextWatcher) innerHolder.outQuantity.getTag());
+                                }
+                                
+                                Log.d("StockOutOrdersAdapter", "[适配器] 直接更新输入框完成，position=" + position);
+                            } else {
+                                // 如果找不到ViewHolder，使用notifyItemChanged作为备选方案
+                                Log.d("StockOutOrdersAdapter", "[适配器] 找不到ViewHolder，使用notifyItemChanged");
+                                notifyItemChanged(position);
+                            }
+                        });
+                    } else {
+                        Log.d("StockOutOrdersAdapter", "[适配器] activity为空，使用notifyItemChanged");
                         notifyItemChanged(position);
-                        Log.d("StockOutOrdersAdapter", "[适配器] UI刷新完成，position=" + position);
-                    });
+                    }
                 } else {
-                    Log.d("StockOutOrdersAdapter", "[适配器] activity为空，直接刷新UI");
-                    notifyItemChanged(position);
-                    Log.d("StockOutOrdersAdapter", "[适配器] UI刷新完成，position=" + position);
+                    Log.d("StockOutOrdersAdapter", "[适配器] 重量未发生变化，跳过UI更新: oldWeight=" + oldWeight + ", newWeight=" + newWeight);
                 }
             } else {
                 Log.e("StockOutOrdersAdapter", "[适配器] 订单为空，无法更新重量");
@@ -366,22 +425,42 @@ public class StockOutOrdersAdapter extends RecyclerView.Adapter<StockOutOrdersAd
                 Log.d("StockOutOrdersAdapter", "[适配器] activity不为空，在主线程中刷新UI");
                 activity.runOnUiThread(() -> {
                     Log.d("StockOutOrdersAdapter", "[适配器] 主线程中刷新UI开始");
-                    // 刷新之前选中的项目
-                    if (oldSelectedPosition >= 0 && oldSelectedPosition < ordersList.size()) {
-                        Log.d("StockOutOrdersAdapter", "[适配器] 刷新之前选中的项目: " + oldSelectedPosition);
-                        notifyItemChanged(oldSelectedPosition);
+                    try {
+                        // 刷新之前选中的项目
+                        if (oldSelectedPosition >= 0 && oldSelectedPosition < ordersList.size()) {
+                            Log.d("StockOutOrdersAdapter", "[适配器] 刷新之前选中的项目: " + oldSelectedPosition);
+                            notifyItemChanged(oldSelectedPosition);
+                        }
+                        // 刷新新选中的项目
+                        Log.d("StockOutOrdersAdapter", "[适配器] 刷新新选中的项目: " + selectedPosition);
+                        notifyItemChanged(selectedPosition);
+                        Log.d("StockOutOrdersAdapter", "[适配器] 主线程中刷新UI完成");
+                    } catch (IllegalStateException e) {
+                        Log.e("StockOutOrdersAdapter", "[适配器] RecyclerView正在计算布局，延迟刷新UI", e);
+                        // 延迟刷新，避免在布局计算期间调用notifyItemChanged
+                        new Handler().postDelayed(() -> {
+                            try {
+                                if (oldSelectedPosition >= 0 && oldSelectedPosition < ordersList.size()) {
+                                    notifyItemChanged(oldSelectedPosition);
+                                }
+                                notifyItemChanged(selectedPosition);
+                                Log.d("StockOutOrdersAdapter", "[适配器] 延迟刷新UI完成");
+                            } catch (Exception ex) {
+                                Log.e("StockOutOrdersAdapter", "[适配器] 延迟刷新UI失败", ex);
+                            }
+                        }, 100);
                     }
-                    // 刷新新选中的项目
-                    Log.d("StockOutOrdersAdapter", "[适配器] 刷新新选中的项目: " + selectedPosition);
-                    notifyItemChanged(selectedPosition);
-                    Log.d("StockOutOrdersAdapter", "[适配器] 主线程中刷新UI完成");
                 });
             } else {
                 Log.d("StockOutOrdersAdapter", "[适配器] activity为空，直接刷新UI");
-                if (oldSelectedPosition >= 0 && oldSelectedPosition < ordersList.size()) {
-                    notifyItemChanged(oldSelectedPosition);
+                try {
+                    if (oldSelectedPosition >= 0 && oldSelectedPosition < ordersList.size()) {
+                        notifyItemChanged(oldSelectedPosition);
+                    }
+                    notifyItemChanged(selectedPosition);
+                } catch (IllegalStateException e) {
+                    Log.e("StockOutOrdersAdapter", "[适配器] RecyclerView正在计算布局，跳过UI刷新", e);
                 }
-                notifyItemChanged(selectedPosition);
             }
         } else {
             Log.e("StockOutOrdersAdapter", "[适配器] 位置无效: position=" + position + ", listSize=" + (ordersList != null ? ordersList.size() : 0));
