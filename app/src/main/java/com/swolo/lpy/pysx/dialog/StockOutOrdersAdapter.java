@@ -227,6 +227,17 @@ public class StockOutOrdersAdapter extends RecyclerView.Adapter<StockOutOrdersAd
         }
         // ========== 输入框边框逻辑修改结束 ==========
         
+        // ========== 蓝牙称弹窗输入框设置为只读（2025-07-22）==========
+        // 功能说明：蓝牙称弹窗中的重量输入框应该是只读的，因为重量由蓝牙称自动设置
+        // 修改原因：用户反馈蓝牙称弹窗中重量输入框可以编辑，这不符合业务逻辑
+        holder.outQuantity.setEnabled(false);
+        holder.outQuantity.setFocusable(false);
+        holder.outQuantity.setFocusableInTouchMode(false);
+        holder.outQuantity.setClickable(false);
+        holder.outQuantity.setLongClickable(false);
+        holder.outQuantity.setCursorVisible(false);
+        // ========== 蓝牙称弹窗输入框设置为只读结束 ==========
+        
         Log.d("StockOutOrdersAdapter", "[适配器] ========== onBindViewHolder结束，位置: " + position + " ==========");
     }
 

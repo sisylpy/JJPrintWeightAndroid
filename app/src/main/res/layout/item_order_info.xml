@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="10dp"
+    android:gravity="center_vertical"
+    android:layout_marginVertical="2dp"
+    android:background="@drawable/order_item_bg">
+
+    <!-- 左侧3/4：部门名+订货数量（同一行两端对齐），备注内容在下方 -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="3"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <TextView
+                android:id="@+id/tv_department"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textSize="16sp"
+                android:textColor="@color/text_gray"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:gravity="start|center_vertical"/>
+            <TextView
+                android:id="@+id/tv_quantity"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="16sp"
+                android:textColor="@color/dark_green"
+                android:textStyle="bold"
+                android:gravity="end|center_vertical"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:layout_marginEnd="13dp"/>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tv_remark"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:textColor="@color/text_light_gray"
+            android:padding="5dp"
+            android:layout_marginTop="4dp"
+            android:visibility="gone"
+            android:gravity="start|center_vertical"/>
+    </LinearLayout>
+
+    <!-- 右侧1/4：出库重量，垂直居中，固定宽度 -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="vertical"
+        android:layout_marginStart="8dp">
+        <TextView
+            android:id="@+id/tv_weight"
+            android:layout_width="90dp"
+            android:layout_height="40dp"
+            android:padding="8dp"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_gray"
+            android:gravity="center"
+            android:background="@drawable/edit_text_modern_bg"/>
+    </LinearLayout>
+</LinearLayout> 

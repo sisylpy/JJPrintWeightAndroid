@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.swolo.lpy.pysx.R;
 import com.swolo.lpy.pysx.main.modal.NxDistributerGoodsShelfGoodsEntity;
+import com.swolo.lpy.pysx.main.modal.NxDistributerGoodsEntity;
 import com.swolo.lpy.pysx.main.modal.NxDepartmentOrdersEntity;
 import com.swolo.lpy.pysx.main.modal.NxDepartmentEntity;
 import com.swolo.lpy.pysx.main.modal.GbDepartmentEntity;
@@ -50,6 +51,21 @@ public class ManualInputDialog extends Dialog {
                 + ", nxDgsgDisGoodsId: " + goods.getNxDgsgDisGoodsId()
                 + ", 商品名: " + (goods.getNxDistributerGoodsEntity() != null ? goods.getNxDistributerGoodsEntity().getNxDgGoodsName() : "null"));
         }
+    }
+
+    // 新增构造函数，用于商品类别模式
+    public ManualInputDialog(@NonNull Context context, NxDistributerGoodsEntity goods, List<NxDepartmentOrdersEntity> orders) {
+        super(context);
+        this.mContext = context;
+        this.orderList = orders;
+        // 创建适配的商品实体
+        if (goods != null) {
+            this.goodsEntity = new NxDistributerGoodsShelfGoodsEntity();
+            this.goodsEntity.setNxDistributerGoodsEntity(goods);
+            this.goodsEntity.setNxDepartmentOrdersEntities(orders);
+            android.util.Log.d("ManualInputDialog", "[构造-商品类别] 商品名: " + goods.getNxDgGoodsName());
+        }
+        android.util.Log.d("ManualInputDialog", "[构造-商品类别] goodsEntity: " + goodsEntity);
     }
 
     @Override

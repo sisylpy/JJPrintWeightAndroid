@@ -82,6 +82,18 @@ public interface GoodsApi {
     );
 
     /**
+     * 客户出库页面 - 按商品类别获取数据
+     * 对应小程序 stokerGetToStockGoodsWithDepIds 接口
+     */
+    @FormUrlEncoded
+    @POST("api/nxdepartmentorders/stokerGetToStockGoodsWithDepIds")
+    Observable<CommonResponse> stokerGetToStockGoodsWithDepIds(
+            @Field("nxDepIds") String nxDepIds,
+            @Field("gbDepIds") String gbDepIds,
+            @Field("nxDisId") Integer nxDisId
+    );
+
+    /**
      * 客户出库页面 - 确认出库
      * 对应小程序 giveOrderWeightListForStockAndFinish 接口
      */

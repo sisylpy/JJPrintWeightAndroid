@@ -43,6 +43,12 @@ import java.util.Vector;
 import com.swolo.lpy.pysx.main.modal.NxDistributerGoodsShelfEntity;
 import com.swolo.lpy.pysx.main.modal.NxDistributerGoodsShelfGoodsEntity;
 import com.swolo.lpy.pysx.main.modal.StockGoodsWithDepIdsResponse;
+import com.swolo.lpy.pysx.main.modal.StockGoodsWithCategoriesResponse;
+import com.swolo.lpy.pysx.main.modal.NxDistributerFatherGoodsEntity;
+import com.swolo.lpy.pysx.main.modal.NxDistributerGoodsEntity;
+import com.swolo.lpy.pysx.main.adapter.CategoryAdapter;
+import com.swolo.lpy.pysx.main.adapter.CategoryGoodsAdapter;
+import com.swolo.lpy.pysx.dialog.ConnectScaleDialog;
 import com.swolo.lpy.pysx.main.adapter.StockOutShelfAdapter;
 import com.swolo.lpy.pysx.main.adapter.StockOutGoodsAdapter;
 import com.swolo.lpy.pysx.dialog.StockOutGoodsDialog;
@@ -99,6 +105,7 @@ public class CustomerStockOutActivity extends AppCompatActivity {
     private RecyclerView rvShelf; // 货架列表显示
     private RecyclerView rvGoods; // 商品列表显示
     private ImageButton btnRight; // 右上角部门按钮
+    private ImageButton btnModeSwitch; // 右上角模式切换按钮
 
     // 【业务核心】数据管理 - 严禁删除或修改
     // 这些变量用于管理客户出库的核心业务数据
@@ -106,6 +113,12 @@ public class CustomerStockOutActivity extends AppCompatActivity {
     private List<NxDistributerGoodsShelfEntity> shelfList = new ArrayList<>(); // 货架数据列表
     private int selectedShelfIndex = -1; // 当前选中的货架索引
     private Integer selectedShelfId = null; // 当前选中的货架ID
+    
+    // 【新增】商品类别模式相关变量
+    private List<NxDistributerFatherGoodsEntity> categoryList = new ArrayList<>(); // 商品类别数据列表
+    private int selectedCategoryIndex = -1; // 当前选中的商品类别索引
+    private Integer selectedCategoryId = null; // 当前选中的商品类别ID
+    private boolean isCategoryMode = true; // 是否为商品类别模式，默认true
     private int disId = -1; // 分销商ID，用于API调用
     private String customerName; // 客户名称，支持多客户显示
     private int customerOrderCount; // 客户订单总数
@@ -177,6 +190,9 @@ public class CustomerStockOutActivity extends AppCompatActivity {
             // 初始化打印机 - 异步执行，不阻塞主线程
             printerPreferences = getSharedPreferences("printer_cache", MODE_PRIVATE);
             printerHandler = new Handler(Looper.getMainLooper());
+            
+            // 初始化模式切换按钮图标
+            updateModeSwitchButtonIcon();
             
             // 初始化加载蒙版
             mLoadingDialog = new CommonLoadingDialog(this);
@@ -308,6 +324,7 @@ public class CustomerStockOutActivity extends AppCompatActivity {
         rvShelf = findViewById(R.id.rv_shelf);
         rvGoods = findViewById(R.id.rv_goods);
         btnRight = findViewById(R.id.btn_right); // 初始化右上角部门按钮
+        btnModeSwitch = findViewById(R.id.btn_mode_switch); // 初始化模式切换按钮
         
         // 设置RecyclerView
         rvShelf.setLayoutManager(new LinearLayoutManager(this));
@@ -380,7 +397,52 @@ public class CustomerStockOutActivity extends AppCompatActivity {
             });
         }
         
+        // 【新增】模式切换按钮点击事件
+        if (btnModeSwitch != null) {
+            btnModeSwitch.setOnClickListener(v -> {
+                Log.d(TAG, "[事件] 点击模式切换按钮，当前模式: " + (isCategoryMode ? "商品类别" : "货架"));
+                toggleDisplayMode();
+            });
+        }
+        
         Log.d(TAG, "[事件] 事件绑定完成");
+    }
+    
+    /**
+     * 【新增】切换显示模式
+     * 在商品类别模式和货架模式之间切换
+     */
+    private void toggleDisplayMode() {
+        Log.d(TAG, "[模式切换] 开始切换显示模式");
+        Log.d(TAG, "[模式切换] 当前模式: " + (isCategoryMode ? "商品类别" : "货架"));
+        
+        // 切换模式
+        isCategoryMode = !isCategoryMode;
+        
+        // 重置选中状态
+        selectedShelfIndex = -1;
+        selectedShelfId = null;
+        selectedCategoryIndex = -1;
+        selectedCategoryId = null;
+        
+        // 更新按钮图标
+        updateModeSwitchButtonIcon();
+        
+        // 重新加载数据
+        loadStockGoodsData();
+        
+        Log.d(TAG, "[模式切换] 模式切换完成，新模式: " + (isCategoryMode ? "商品类别" : "货架"));
+    }
+    
+    /**
+     * 【新增】更新模式切换按钮文本
+     */
+    private void updateModeSwitchButtonIcon() {
+        if (btnModeSwitch != null) {
+            int iconResource = isCategoryMode ? R.drawable.shelf : R.drawable.goods;
+            btnModeSwitch.setImageResource(iconResource);
+            Log.d(TAG, "[模式切换] 更新按钮图标: " + (isCategoryMode ? "货架图标" : "商品图标"));
+        }
     }
 
     /**
@@ -473,50 +535,101 @@ public class CustomerStockOutActivity extends AppCompatActivity {
         // 显示加载蒙版
         showLoading();
         
-        // 调用接口获取数据，参数格式与小程序完全一致
+        // 根据模式调用不同的接口
         GoodsApi api = HttpManager.getInstance().getApi(GoodsApi.class);
-        HttpManager.getInstance()
-                .request(api.stockerGetToStockGoodsWithDepIdsKf(nxDepIds.toString(), gbDepIds.toString(), disId),
-                        new TypeToken<StockGoodsWithDepIdsResponse>() {})
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Subscriber<StockGoodsWithDepIdsResponse>() {
-                    @Override
-                    public void onCompleted() {
-                        Log.d(TAG, "[接口] stockerGetToStockGoodsWithDepIdsKf 请求完成");
-                        hideLoading();
-                    }
+        
+        if (isCategoryMode) {
+            // 商品类别模式 - 调用 stokerGetToStockGoodsWithDepIds 接口
+            Log.d(TAG, "[数据] 商品类别模式，调用 stokerGetToStockGoodsWithDepIds 接口");
+            HttpManager.getInstance()
+                    .request(api.stokerGetToStockGoodsWithDepIds(nxDepIds.toString(), gbDepIds.toString(), disId),
+                            new TypeToken<StockGoodsWithCategoriesResponse>() {})
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(new Subscriber<StockGoodsWithCategoriesResponse>() {
+                        @Override
+                        public void onCompleted() {
+                            Log.d(TAG, "[接口] stokerGetToStockGoodsWithDepIds 请求完成");
+                            hideLoading();
+                        }
 
-                    @Override
-                    public void onError(Throwable e) {
-                        Log.e(TAG, "[接口] stockerGetToStockGoodsWithDepIdsKf 请求失败", e);
-                        hideLoading();
-                        Toast.makeText(CustomerStockOutActivity.this, 
-                                "获取数据失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                        showEmptyState();
-                    }
-
-                    @Override
-                    public void onNext(StockGoodsWithDepIdsResponse response) {
-                        Log.d(TAG, "[接口] stockerGetToStockGoodsWithDepIdsKf 请求成功，数据: " + response);
-                        
-                        if (response != null && response.getShelfArr() != null) {
-                            shelfList = response.getShelfArr();
-                            Log.d(TAG, "[数据] 解析到 " + shelfList.size() + " 个货架");
-                            
-                            if (shelfList.isEmpty()) {
-                                Log.w(TAG, "[数据] 货架列表为空，清除缓存并返回");
-                                clearCustomerCache();
-                                finish();
-                            } else {
-                                updateUI();
-                            }
-                        } else {
-                            Log.w(TAG, "[数据] 响应数据为空");
+                        @Override
+                        public void onError(Throwable e) {
+                            Log.e(TAG, "[接口] stokerGetToStockGoodsWithDepIds 请求失败", e);
+                            hideLoading();
+                            Toast.makeText(CustomerStockOutActivity.this, 
+                                    "获取数据失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                             showEmptyState();
                         }
-                    }
-                });
+
+                        @Override
+                        public void onNext(StockGoodsWithCategoriesResponse response) {
+                            Log.d(TAG, "[接口] stokerGetToStockGoodsWithDepIds 请求成功，数据: " + response);
+                            
+                            if (response != null && response.getGrandArr() != null) {
+                                categoryList = response.getGrandArr();
+                                Log.d(TAG, "[数据] 解析到 " + categoryList.size() + " 个商品类别");
+                                
+                                if (categoryList.isEmpty()) {
+                                    Log.w(TAG, "[数据] 商品类别列表为空，清除缓存并返回");
+                                    clearCustomerCache();
+                                    finish();
+                                } else {
+                                    updateUI();
+                                }
+                            } else {
+                                Log.w(TAG, "[数据] 响应数据为空");
+                                showEmptyState();
+                            }
+                        }
+                    });
+        } else {
+            // 货架模式 - 调用 stockerGetToStockGoodsWithDepIdsKf 接口
+            Log.d(TAG, "[数据] 货架模式，调用 stockerGetToStockGoodsWithDepIdsKf 接口");
+            HttpManager.getInstance()
+                    .request(api.stockerGetToStockGoodsWithDepIdsKf(nxDepIds.toString(), gbDepIds.toString(), disId),
+                            new TypeToken<StockGoodsWithDepIdsResponse>() {})
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(new Subscriber<StockGoodsWithDepIdsResponse>() {
+                        @Override
+                        public void onCompleted() {
+                            Log.d(TAG, "[接口] stockerGetToStockGoodsWithDepIdsKf 请求完成");
+                            hideLoading();
+                        }
+
+                        @Override
+                        public void onError(Throwable e) {
+                            Log.e(TAG, "[接口] stockerGetToStockGoodsWithDepIdsKf 请求失败", e);
+                            hideLoading();
+                            Toast.makeText(CustomerStockOutActivity.this, 
+                                    "获取数据失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            showEmptyState();
+                        }
+
+                        @Override
+                        public void onNext(StockGoodsWithDepIdsResponse response) {
+                            Log.d(TAG, "[接口] stockerGetToStockGoodsWithDepIdsKf 请求成功，数据: " + response);
+                            
+                            if (response != null && response.getShelfArr() != null) {
+                                shelfList = response.getShelfArr();
+                                Log.d(TAG, "[数据] 解析到 " + shelfList.size() + " 个货架");
+                                
+                                if (shelfList.isEmpty()) {
+                                    Log.w(TAG, "[数据] 货架列表为空，清除缓存并返回");
+                                    clearCustomerCache();
+                                    finish();
+                                } else {
+                                    updateUI();
+                                }
+                            } else {
+                                Log.w(TAG, "[数据] 响应数据为空");
+                                showEmptyState();
+                            }
+                        }
+                    });
+        }
+        
         Log.d("PERF", "loadStockGoodsData end: " + System.currentTimeMillis() + ", 耗时: " + (System.currentTimeMillis() - start) + "ms");
     }
 
@@ -524,7 +637,88 @@ public class CustomerStockOutActivity extends AppCompatActivity {
      * 更新UI显示
      */
     private void updateUI() {
-        Log.d(TAG, "[UI] 开始更新UI显示");
+        Log.d(TAG, "[UI] 开始更新UI显示，当前模式: " + (isCategoryMode ? "商品类别" : "货架"));
+        
+        if (isCategoryMode) {
+            // 商品类别模式
+            updateCategoryUI();
+        } else {
+            // 货架模式
+            updateShelfUI();
+        }
+        
+        Log.d(TAG, "[UI] UI更新完成");
+    }
+    
+    /**
+     * 【新增】更新商品类别UI
+     */
+    private void updateCategoryUI() {
+        Log.d(TAG, "[UI] 更新商品类别UI");
+        
+        // 设置商品类别适配器
+        if (rvShelf != null) {
+            CategoryAdapter categoryAdapter = new CategoryAdapter();
+            categoryAdapter.setData(categoryList);
+            rvShelf.setLayoutManager(new LinearLayoutManager(this));
+            rvShelf.setAdapter(categoryAdapter);
+            
+            // 设置商品类别选中状态
+            if (selectedCategoryIndex >= 0 && selectedCategoryIndex < categoryList.size()) {
+                categoryAdapter.setSelectedPosition(selectedCategoryIndex);
+                Log.d(TAG, "[UI] 设置商品类别适配器选中位置: " + selectedCategoryIndex);
+            }
+            
+            // 设置商品类别点击事件
+            categoryAdapter.setOnItemClickListener(new CategoryAdapter.OnItemClickListener() {
+                @Override
+                public void onItemClick(NxDistributerFatherGoodsEntity entity) {
+                    selectedCategoryIndex = categoryList.indexOf(entity);
+                    selectedCategoryId = entity.getNxDistributerFatherGoodsId();
+                    Log.d(TAG, "[商品类别点击] 选中类别: index=" + selectedCategoryIndex + ", id=" + selectedCategoryId + ", name=" + entity.getNxDfgFatherGoodsName());
+                    updateCategoryGoodsList();
+                }
+            });
+            
+            Log.d(TAG, "[UI] 商品类别适配器设置完成，共 " + categoryList.size() + " 个类别");
+        }
+        
+        // 如果有商品类别数据，根据记录的商品类别ID选中对应类别
+        if (!categoryList.isEmpty()) {
+            if (selectedCategoryId != null) {
+                // 根据记录的商品类别ID查找对应的类别
+                int targetIndex = -1;
+                for (int i = 0; i < categoryList.size(); i++) {
+                    if (selectedCategoryId.equals(categoryList.get(i).getNxDistributerFatherGoodsId())) {
+                        targetIndex = i;
+                        break;
+                    }
+                }
+                
+                if (targetIndex >= 0) {
+                    selectedCategoryIndex = targetIndex;
+                    Log.d(TAG, "[UI] 根据商品类别ID选中类别: id=" + selectedCategoryId + ", index=" + selectedCategoryIndex + ", name=" + categoryList.get(selectedCategoryIndex).getNxDfgFatherGoodsName());
+                } else {
+                    // 如果找不到对应的商品类别ID，默认选中第一个
+                    selectedCategoryIndex = 0;
+                    selectedCategoryId = categoryList.get(0).getNxDistributerFatherGoodsId();
+                    Log.d(TAG, "[UI] 未找到记录的商品类别ID，默认选中第一个类别: id=" + selectedCategoryId + ", index=" + selectedCategoryIndex);
+                }
+            } else {
+                // 第一次加载，默认选中第一个商品类别
+                selectedCategoryIndex = 0;
+                selectedCategoryId = categoryList.get(0).getNxDistributerFatherGoodsId();
+                Log.d(TAG, "[UI] 首次加载，默认选中第一个商品类别: id=" + selectedCategoryId + ", index=" + selectedCategoryIndex);
+            }
+            updateCategoryGoodsList();
+        }
+    }
+    
+    /**
+     * 【新增】更新货架UI
+     */
+    private void updateShelfUI() {
+        Log.d(TAG, "[UI] 更新货架UI");
         
         // 设置货架适配器
         if (rvShelf != null) {
@@ -540,16 +734,16 @@ public class CustomerStockOutActivity extends AppCompatActivity {
             }
             
             // 设置货架点击事件
-        shelfAdapter.setOnItemClickListener(new StockOutShelfAdapter.OnItemClickListener() {
-            @Override
-            public void onItemClick(NxDistributerGoodsShelfEntity entity) {
-                selectedShelfIndex = shelfList.indexOf(entity);
-                selectedShelfId = entity.getNxDistributerGoodsShelfId();
-                Log.d(TAG, "[货架点击] 选中货架: index=" + selectedShelfIndex + ", id=" + selectedShelfId + ", name=" + entity.getNxDistributerGoodsShelfName());
-                updateGoodsList();
-            }
-        });
-        
+            shelfAdapter.setOnItemClickListener(new StockOutShelfAdapter.OnItemClickListener() {
+                @Override
+                public void onItemClick(NxDistributerGoodsShelfEntity entity) {
+                    selectedShelfIndex = shelfList.indexOf(entity);
+                    selectedShelfId = entity.getNxDistributerGoodsShelfId();
+                    Log.d(TAG, "[货架点击] 选中货架: index=" + selectedShelfIndex + ", id=" + selectedShelfId + ", name=" + entity.getNxDistributerGoodsShelfName());
+                    updateGoodsList();
+                }
+            });
+            
             Log.d(TAG, "[UI] 货架适配器设置完成，共 " + shelfList.size() + " 个货架");
         }
         
@@ -582,8 +776,39 @@ public class CustomerStockOutActivity extends AppCompatActivity {
             }
             updateGoodsList();
         }
+    }
+    
+    /**
+     * 【新增】更新商品类别商品列表
+     */
+    private void updateCategoryGoodsList() {
+        if (selectedCategoryIndex < 0 || selectedCategoryIndex >= categoryList.size()) {
+            Log.w(TAG, "[UI] 选中的商品类别索引无效: " + selectedCategoryIndex);
+            return;
+        }
         
-        Log.d(TAG, "[UI] UI更新完成");
+        NxDistributerFatherGoodsEntity selectedCategory = categoryList.get(selectedCategoryIndex);
+        List<NxDistributerGoodsEntity> goodsList = selectedCategory.getNxDistributerGoodsEntities();
+        
+        Log.d(TAG, "[UI] 更新商品类别商品列表，类别: " + selectedCategory.getNxDfgFatherGoodsName() + 
+              "，商品数量: " + (goodsList != null ? goodsList.size() : 0));
+        
+        if (rvGoods != null) {
+            CategoryGoodsAdapter goodsAdapter = new CategoryGoodsAdapter();
+            goodsAdapter.setGoodsList(goodsList != null ? goodsList : new ArrayList<>());
+            rvGoods.setAdapter(goodsAdapter);
+            
+            // 设置商品点击事件
+            goodsAdapter.setOnItemClickListener(new CategoryGoodsAdapter.OnItemClickListener() {
+                @Override
+                public void onItemClick(NxDistributerGoodsEntity goods) {
+                    Log.d(TAG, "[商品点击] 选中商品: " + goods.getNxDgGoodsName());
+                    showCategoryStockOutDialog(goods);
+                }
+            });
+            
+            Log.d(TAG, "[UI] 商品类别商品适配器设置完成");
+        }
     }
     
     /**
@@ -760,6 +985,135 @@ public class CustomerStockOutActivity extends AppCompatActivity {
             Log.d(TAG, "[日志追踪] ManualInputDialog.show() 调用");
             currentDialog = dialog;
         }
+    }
+
+    /**
+     * 【新增】商品类别模式下的出库对话框
+     */
+    private void showCategoryStockOutDialog(NxDistributerGoodsEntity goods) {
+        Log.d(TAG, "[日志追踪] showCategoryStockOutDialog called, goods=" + goods.getNxDgGoodsName());
+        try {
+            refreshStockOutMode();
+            Log.d(TAG, "[日志追踪] 当前出库模式: " + (isPrintMode ? "打印标签" : "非打印标签"));
+            Log.d(TAG, "[日志追踪] 开始创建出库弹窗判断");
+        } catch (Exception e) {
+            Log.e(TAG, "[日志追踪] showCategoryStockOutDialog 异常: " + e.getMessage(), e);
+            return;
+        }
+
+        // 【新增】根据是否有蓝牙称缓存，弹出蓝牙称弹窗或人工输入弹窗
+        boolean scaleCache = hasScaleCache();
+        Log.d(TAG, "[日志追踪] hasScaleCache() 判断结果: " + scaleCache);
+        if (scaleCache) {
+            Log.d(TAG, "[日志追踪] 选择弹出蓝牙称弹窗 StockOutGoodsDialog");
+            // 创建适配器，将 NxDistributerGoodsEntity 转换为 NxDistributerGoodsShelfGoodsEntity
+            NxDistributerGoodsShelfGoodsEntity adaptedGoods = createAdaptedGoodsEntity(goods);
+            StockOutGoodsDialog dialog = new StockOutGoodsDialog(this, adaptedGoods, isPrintMode);
+            Log.d(TAG, "[日志追踪] StockOutGoodsDialog创建完成");
+            dialog.setOnConfirmListener(orders -> {
+                Log.d(TAG, "[日志追踪] StockOutGoodsDialog 确认回调, 订单数量: " + (orders != null ? orders.size() : 0));
+                if (orders != null && !orders.isEmpty()) {
+                    for (int i = 0; i < orders.size(); i++) {
+                        NxDepartmentOrdersEntity order = orders.get(i);
+                        Log.d(TAG, "[日志追踪] StockOutGoodsDialog 订单" + (i+1) + "详情: orderId=" + order.getNxDepartmentOrdersId() + ", weight=" + order.getNxDoWeight());
+                    }
+                    if (isPrintMode) {
+                        Log.d(TAG, "[日志追踪] StockOutGoodsDialog 打印模式，调用printAndSaveOrders");
+                        printAndSaveOrders(orders, 0);
+                    } else {
+                        Log.d(TAG, "[日志追踪] StockOutGoodsDialog 非打印模式，直接保存订单");
+                        saveOrdersToServer(orders);
+                    }
+                }
+            });
+            dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                @Override
+                public void onDismiss(DialogInterface dialog) {
+                    Log.d(TAG, "[日志追踪] StockOutGoodsDialog onDismiss");
+                    currentDialog = null;
+                }
+            });
+            dialog.show();
+            Log.d(TAG, "[日志追踪] StockOutGoodsDialog.show() 调用");
+            currentDialog = dialog;
+        } else {
+            Log.d(TAG, "[日志追踪] 选择弹出人工输入弹窗 ManualInputDialog");
+            List<NxDepartmentOrdersEntity> orderList = getOrderListForCategoryGoods(goods);
+            ManualInputDialog dialog = new ManualInputDialog(this, goods, orderList);
+            dialog.setOnConfirmListener(orders -> {
+                Log.d(TAG, "[日志追踪] ManualInputDialog 确认回调, 订单数量: " + (orders != null ? orders.size() : 0));
+                if (orders != null && !orders.isEmpty()) {
+                    for (int i = 0; i < orders.size(); i++) {
+                        NxDepartmentOrdersEntity order = orders.get(i);
+                        Log.d(TAG, "[日志追踪] ManualInputDialog 订单" + (i+1) + "详情: orderId=" + order.getNxDepartmentOrdersId() + ", weight=" + order.getNxDoWeight());
+                    }
+                    if (isPrintMode) {
+                        Log.d(TAG, "[日志追踪] ManualInputDialog 打印模式，调用printAndSaveOrders");
+                        printAndSaveOrders(orders, 0);
+                    } else {
+                        Log.d(TAG, "[日志追踪] ManualInputDialog 非打印模式，直接保存订单");
+                        saveOrdersToServer(orders);
+                    }
+                }
+            });
+            dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                @Override
+                public void onDismiss(DialogInterface dialog) {
+                    Log.d(TAG, "[日志追踪] ManualInputDialog onDismiss");
+                    currentDialog = null;
+                }
+            });
+            dialog.show();
+            Log.d(TAG, "[日志追踪] ManualInputDialog.show() 调用");
+            currentDialog = dialog;
+        }
+    }
+
+    /**
+     * 【新增】获取商品类别商品的订单列表
+     */
+    private List<NxDepartmentOrdersEntity> getOrderListForCategoryGoods(NxDistributerGoodsEntity goods) {
+        Log.d(TAG, "[日志追踪] getOrderListForCategoryGoods called, goods=" + (goods != null ? goods.getNxDgGoodsName() : "null"));
+        
+        List<NxDepartmentOrdersEntity> orders = null;
+        if (goods != null) {
+            orders = goods.getNxDepartmentOrdersEntities();
+            Log.d(TAG, "[日志追踪] getOrderListForCategoryGoods 获取订单: " + (orders != null ? orders.size() : 0));
+        }
+        
+        if (orders == null) {
+            orders = new ArrayList<>();
+            Log.d(TAG, "[日志追踪] getOrderListForCategoryGoods 创建空订单列表");
+        }
+        
+        Log.d(TAG, "[日志追踪] getOrderListForCategoryGoods 最终返回订单数量: " + orders.size());
+        return orders;
+    }
+
+    /**
+     * 【新增】创建适配的商品实体，用于蓝牙称弹窗
+     */
+    private NxDistributerGoodsShelfGoodsEntity createAdaptedGoodsEntity(NxDistributerGoodsEntity goods) {
+        Log.d(TAG, "[日志追踪] createAdaptedGoodsEntity called, goods=" + goods.getNxDgGoodsName());
+        
+        // 创建一个新的 NxDistributerGoodsShelfGoodsEntity 实例
+        NxDistributerGoodsShelfGoodsEntity adaptedGoods = new NxDistributerGoodsShelfGoodsEntity();
+        
+        // 设置商品信息
+        adaptedGoods.setNxDistributerGoodsEntity(goods);
+        
+        // 设置订单信息
+        List<NxDepartmentOrdersEntity> orders = goods.getNxDepartmentOrdersEntities();
+        if (orders != null) {
+            adaptedGoods.setNxDepartmentOrdersEntities(orders);
+            Log.d(TAG, "[日志追踪] createAdaptedGoodsEntity 设置订单数量: " + orders.size());
+        } else {
+            adaptedGoods.setNxDepartmentOrdersEntities(new ArrayList<>());
+            Log.d(TAG, "[日志追踪] createAdaptedGoodsEntity 设置空订单列表");
+        }
+        
+        Log.d(TAG, "[日志追踪] createAdaptedGoodsEntity 完成，商品名称: " + goods.getNxDgGoodsName());
+        return adaptedGoods;
     }
 
     // 【新增】获取当前商品的订单列表（可根据实际业务调整）

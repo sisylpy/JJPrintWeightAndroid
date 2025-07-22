@@ -438,6 +438,13 @@ public class StockOutGoodsDialog extends Dialog {
                 Log.d(TAG, "[弹窗] 创建订单适配器后: ordersAdapter hash=" + ordersAdapter.hashCode());
                 ordersRecyclerView.setAdapter(ordersAdapter);
                 Log.d(TAG, "订单适配器设置完成");
+                
+                // 设置输入框为只读状态，因为重量由蓝牙称自动设置
+                Log.d(TAG, "[弹窗] 设置输入框为只读状态");
+                for (NxDepartmentOrdersEntity order : orders) {
+                    // 这里我们无法直接访问输入框，需要在适配器中设置
+                    // 我们将在适配器中添加设置输入框状态的方法
+                }
                 for (NxDepartmentOrdersEntity order : orders) {
                     Log.d(TAG, "[弹窗] 订单详情: " + new Gson().toJson(order));
                 }

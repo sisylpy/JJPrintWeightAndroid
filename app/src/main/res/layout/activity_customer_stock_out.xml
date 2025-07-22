@@ -42,19 +42,39 @@
             android:maxLines="1"
             android:ellipsize="end"/>
 
-        <!-- 右侧部门按钮 -->
-        <ImageButton
-            android:id="@+id/btn_right"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
+        <!-- 右侧按钮容器 -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:src="@android:drawable/ic_menu_agenda"
-            android:scaleType="centerInside"
-            android:contentDescription="部门"
-            android:padding="10dp"
-            android:visibility="gone"/>
+            android:orientation="horizontal">
+
+            <!-- 模式切换按钮 -->
+            <ImageButton
+                android:id="@+id/btn_mode_switch"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginEnd="8dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/shelf"
+                android:scaleType="centerInside"
+                android:contentDescription="模式切换"
+                android:padding="10dp"/>
+
+            <!-- 部门按钮 -->
+            <ImageButton
+                android:id="@+id/btn_right"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_menu_agenda"
+                android:scaleType="centerInside"
+                android:contentDescription="部门"
+                android:padding="10dp"
+                android:visibility="gone"/>
+
+        </LinearLayout>
 
     </RelativeLayout>
 

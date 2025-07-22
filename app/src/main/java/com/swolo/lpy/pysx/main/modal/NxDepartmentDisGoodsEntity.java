@@ -1,307 +1,148 @@
 package com.swolo.lpy.pysx.main.modal;
 
 import java.io.Serializable;
-import java.util.List;
 
 /**
- * Created by Administrator on 2016/12/22 0022.
+ * 部门分销商品实体类
  */
-
-public class NxDepartmentDisGoodsEntity implements Serializable{
-
-    public Integer nxCommunityFatherGoodsId;
-
-    public static final long serialVersionUID = 1L;
-
-
-    /**
-     *
-     */
-    public Integer nxDepartmentDisGoodsId;
-    /**
-     *
-     */
-    public Integer nxDdgDepartmentFatherId;
-    /**
-     *
-     */
-    public Integer nxDdgDepartmentId;
-    /**
-     *
-     */
-    public Integer nxDdgDisGoodsId;
-    public Integer nxDdgDisGoodsFatherId;
-
-    public String getNxDdgDepGoodsName() {
-        return nxDdgDepGoodsName;
+public class NxDepartmentDisGoodsEntity implements Serializable {
+    
+    private static final long serialVersionUID = 1L;
+    
+    private Integer nxDepartmentDisGoodsId;
+    private Integer nxDdgDepartmentId;
+    private Integer nxDdgDistributerId;
+    private Integer nxDdgGoodsId;
+    private String nxDdgGoodsName;
+    private String nxDdgGoodsBrand;
+    private String nxDdgGoodsStandardname;
+    private String nxDdgGoodsStandardWeight;
+    private String nxDdgBuyingPrice;
+    private String nxDdgWillPrice;
+    private Integer nxDdgGoodsStatus;
+    private Integer nxDdgGoodsSort;
+    private String nxDdgGoodsRemark;
+    private String nxDdgGoodsTime;
+    private String nxDdgGoodsUpdateTime;
+    
+    // Getters and Setters
+    public Integer getNxDepartmentDisGoodsId() {
+        return nxDepartmentDisGoodsId;
     }
 
-    public void setNxDdgDepGoodsName(String nxDdgDepGoodsName) {
-        this.nxDdgDepGoodsName = nxDdgDepGoodsName;
+    public void setNxDepartmentDisGoodsId(Integer nxDepartmentDisGoodsId) {
+        this.nxDepartmentDisGoodsId = nxDepartmentDisGoodsId;
     }
 
-    public String getNxDdgDepGoodsPinyin() {
-        return nxDdgDepGoodsPinyin;
+    public Integer getNxDdgDepartmentId() {
+        return nxDdgDepartmentId;
     }
 
-    public void setNxDdgDepGoodsPinyin(String nxDdgDepGoodsPinyin) {
-        this.nxDdgDepGoodsPinyin = nxDdgDepGoodsPinyin;
+    public void setNxDdgDepartmentId(Integer nxDdgDepartmentId) {
+        this.nxDdgDepartmentId = nxDdgDepartmentId;
     }
 
-    public String getNxDdgDepGoodsPy() {
-        return nxDdgDepGoodsPy;
+    public Integer getNxDdgDistributerId() {
+        return nxDdgDistributerId;
     }
 
-    public void setNxDdgDepGoodsPy(String nxDdgDepGoodsPy) {
-        this.nxDdgDepGoodsPy = nxDdgDepGoodsPy;
+    public void setNxDdgDistributerId(Integer nxDdgDistributerId) {
+        this.nxDdgDistributerId = nxDdgDistributerId;
     }
 
-    public Integer getNxDdgDisGoodsGrandId() {
-        return nxDdgDisGoodsGrandId;
+    public Integer getNxDdgGoodsId() {
+        return nxDdgGoodsId;
     }
 
-    public void setNxDdgDisGoodsGrandId(Integer nxDdgDisGoodsGrandId) {
-        this.nxDdgDisGoodsGrandId = nxDdgDisGoodsGrandId;
+    public void setNxDdgGoodsId(Integer nxDdgGoodsId) {
+        this.nxDdgGoodsId = nxDdgGoodsId;
     }
 
-    public String getNxDdgDepGoodsStandardname() {
-        return nxDdgDepGoodsStandardname;
+    public String getNxDdgGoodsName() {
+        return nxDdgGoodsName;
     }
 
-    public void setNxDdgDepGoodsStandardname(String nxDdgDepGoodsStandardname) {
-        this.nxDdgDepGoodsStandardname = nxDdgDepGoodsStandardname;
+    public void setNxDdgGoodsName(String nxDdgGoodsName) {
+        this.nxDdgGoodsName = nxDdgGoodsName;
     }
 
-    public String getNxDdgDepGoodsDetail() {
-        return nxDdgDepGoodsDetail;
+    public String getNxDdgGoodsBrand() {
+        return nxDdgGoodsBrand;
     }
 
-    public void setNxDdgDepGoodsDetail(String nxDdgDepGoodsDetail) {
-        this.nxDdgDepGoodsDetail = nxDdgDepGoodsDetail;
+    public void setNxDdgGoodsBrand(String nxDdgGoodsBrand) {
+        this.nxDdgGoodsBrand = nxDdgGoodsBrand;
     }
 
-    public String getNxDdgDepGoodsBrand() {
-        return nxDdgDepGoodsBrand;
+    public String getNxDdgGoodsStandardname() {
+        return nxDdgGoodsStandardname;
     }
 
-    public void setNxDdgDepGoodsBrand(String nxDdgDepGoodsBrand) {
-        this.nxDdgDepGoodsBrand = nxDdgDepGoodsBrand;
+    public void setNxDdgGoodsStandardname(String nxDdgGoodsStandardname) {
+        this.nxDdgGoodsStandardname = nxDdgGoodsStandardname;
     }
 
-    public String getNxDdgDepGoodsPlace() {
-        return nxDdgDepGoodsPlace;
+    public String getNxDdgGoodsStandardWeight() {
+        return nxDdgGoodsStandardWeight;
     }
 
-    public void setNxDdgDepGoodsPlace(String nxDdgDepGoodsPlace) {
-        this.nxDdgDepGoodsPlace = nxDdgDepGoodsPlace;
+    public void setNxDdgGoodsStandardWeight(String nxDdgGoodsStandardWeight) {
+        this.nxDdgGoodsStandardWeight = nxDdgGoodsStandardWeight;
     }
 
-    public String getNxDdgOrderPrice() {
-        return nxDdgOrderPrice;
+    public String getNxDdgBuyingPrice() {
+        return nxDdgBuyingPrice;
     }
 
-    public void setNxDdgOrderPrice(String nxDdgOrderPrice) {
-        this.nxDdgOrderPrice = nxDdgOrderPrice;
+    public void setNxDdgBuyingPrice(String nxDdgBuyingPrice) {
+        this.nxDdgBuyingPrice = nxDdgBuyingPrice;
     }
 
-    public String getNxDdgOrderDate() {
-        return nxDdgOrderDate;
+    public String getNxDdgWillPrice() {
+        return nxDdgWillPrice;
     }
 
-    public void setNxDdgOrderDate(String nxDdgOrderDate) {
-        this.nxDdgOrderDate = nxDdgOrderDate;
+    public void setNxDdgWillPrice(String nxDdgWillPrice) {
+        this.nxDdgWillPrice = nxDdgWillPrice;
     }
 
-    public String getNxDdgOrderRemark() {
-        return nxDdgOrderRemark;
+    public Integer getNxDdgGoodsStatus() {
+        return nxDdgGoodsStatus;
     }
 
-    public void setNxDdgOrderRemark(String nxDdgOrderRemark) {
-        this.nxDdgOrderRemark = nxDdgOrderRemark;
+    public void setNxDdgGoodsStatus(Integer nxDdgGoodsStatus) {
+        this.nxDdgGoodsStatus = nxDdgGoodsStatus;
     }
 
-    public String getNxDdgOrderQuantity() {
-        return nxDdgOrderQuantity;
+    public Integer getNxDdgGoodsSort() {
+        return nxDdgGoodsSort;
     }
 
-    public void setNxDdgOrderQuantity(String nxDdgOrderQuantity) {
-        this.nxDdgOrderQuantity = nxDdgOrderQuantity;
+    public void setNxDdgGoodsSort(Integer nxDdgGoodsSort) {
+        this.nxDdgGoodsSort = nxDdgGoodsSort;
     }
 
-    public String getNxDdgOrderStandard() {
-        return nxDdgOrderStandard;
+    public String getNxDdgGoodsRemark() {
+        return nxDdgGoodsRemark;
     }
 
-    public void setNxDdgOrderStandard(String nxDdgOrderStandard) {
-        this.nxDdgOrderStandard = nxDdgOrderStandard;
+    public void setNxDdgGoodsRemark(String nxDdgGoodsRemark) {
+        this.nxDdgGoodsRemark = nxDdgGoodsRemark;
     }
 
-    public String getNxDdgGoodsPlace() {
-        return nxDdgGoodsPlace;
+    public String getNxDdgGoodsTime() {
+        return nxDdgGoodsTime;
     }
 
-    public void setNxDdgGoodsPlace(String nxDdgGoodsPlace) {
-        this.nxDdgGoodsPlace = nxDdgGoodsPlace;
+    public void setNxDdgGoodsTime(String nxDdgGoodsTime) {
+        this.nxDdgGoodsTime = nxDdgGoodsTime;
     }
 
-    public String getNxDdgOrderCostPrice() {
-        return nxDdgOrderCostPrice;
+    public String getNxDdgGoodsUpdateTime() {
+        return nxDdgGoodsUpdateTime;
     }
 
-    public void setNxDdgOrderCostPrice(String nxDdgOrderCostPrice) {
-        this.nxDdgOrderCostPrice = nxDdgOrderCostPrice;
+    public void setNxDdgGoodsUpdateTime(String nxDdgGoodsUpdateTime) {
+        this.nxDdgGoodsUpdateTime = nxDdgGoodsUpdateTime;
     }
-
-    public String getNxDdgOrderGoodsName() {
-        return nxDdgOrderGoodsName;
-    }
-
-    public void setNxDdgOrderGoodsName(String nxDdgOrderGoodsName) {
-        this.nxDdgOrderGoodsName = nxDdgOrderGoodsName;
-    }
-
-    public String getNxDdgPickDetail() {
-        return nxDdgPickDetail;
-    }
-
-    public void setNxDdgPickDetail(String nxDdgPickDetail) {
-        this.nxDdgPickDetail = nxDdgPickDetail;
-    }
-
-    public Integer getIsDownload() {
-        return isDownload;
-    }
-
-    public void setIsDownload(Integer isDownload) {
-        this.isDownload = isDownload;
-    }
-
-    public Boolean getSelected() {
-        return isSelected;
-    }
-
-    public void setSelected(Boolean selected) {
-        isSelected = selected;
-    }
-
-    public Integer getNxDdgIsGbDepartment() {
-        return nxDdgIsGbDepartment;
-    }
-
-    public void setNxDdgIsGbDepartment(Integer nxDdgIsGbDepartment) {
-        this.nxDdgIsGbDepartment = nxDdgIsGbDepartment;
-    }
-
-    public Integer getNxDdgGbDepartmentFatherId() {
-        return nxDdgGbDepartmentFatherId;
-    }
-
-    public void setNxDdgGbDepartmentFatherId(Integer nxDdgGbDepartmentFatherId) {
-        this.nxDdgGbDepartmentFatherId = nxDdgGbDepartmentFatherId;
-    }
-
-    public Integer getNxDdgGbDepartmentId() {
-        return nxDdgGbDepartmentId;
-    }
-
-    public void setNxDdgGbDepartmentId(Integer nxDdgGbDepartmentId) {
-        this.nxDdgGbDepartmentId = nxDdgGbDepartmentId;
-    }
-
-    public Integer getNxDdgOrderSellerUserId() {
-        return nxDdgOrderSellerUserId;
-    }
-
-    public void setNxDdgOrderSellerUserId(Integer nxDdgOrderSellerUserId) {
-        this.nxDdgOrderSellerUserId = nxDdgOrderSellerUserId;
-    }
-
-    public Integer getNxDdgOrderBuyerUserId() {
-        return nxDdgOrderBuyerUserId;
-    }
-
-    public void setNxDdgOrderBuyerUserId(Integer nxDdgOrderBuyerUserId) {
-        this.nxDdgOrderBuyerUserId = nxDdgOrderBuyerUserId;
-    }
-
-    public Integer getNxDdgNxDistributerId() {
-        return nxDdgNxDistributerId;
-    }
-
-    public void setNxDdgNxDistributerId(Integer nxDdgNxDistributerId) {
-        this.nxDdgNxDistributerId = nxDdgNxDistributerId;
-    }
-
-    public Integer getNxDdgGbDistributerId() {
-        return nxDdgGbDistributerId;
-    }
-
-    public void setNxDdgGbDistributerId(Integer nxDdgGbDistributerId) {
-        this.nxDdgGbDistributerId = nxDdgGbDistributerId;
-    }
-
-    public NxDepartmentEntity getNxDepartmentEntity() {
-        return nxDepartmentEntity;
-    }
-
-    public void setNxDepartmentEntity(NxDepartmentEntity nxDepartmentEntity) {
-        this.nxDepartmentEntity = nxDepartmentEntity;
-    }
-
-
-    /**
-     *
-     */
-    public String nxDdgDepGoodsName;
-    /**
-     *
-     */
-    public String nxDdgDepGoodsPinyin;
-    /**
-     *
-     */
-    public String nxDdgDepGoodsPy;
-    /**
-     *
-     */
-    public Integer nxDdgDisGoodsGrandId;
-    /**
-     *
-     */
-    public String nxDdgDepGoodsStandardname;
-    /**
-     *
-     */
-    public String nxDdgDepGoodsDetail;
-    public String nxDdgDepGoodsBrand;
-    public String nxDdgDepGoodsPlace;
-    public String nxDdgOrderPrice;
-    public String nxDdgOrderDate;
-    public String nxDdgOrderRemark;
-    public String nxDdgOrderQuantity;
-    public String nxDdgOrderStandard;
-    public String nxDdgGoodsPlace;
-    public String nxDdgOrderCostPrice;
-    public String nxDdgOrderGoodsName;
-    public String nxDdgPickDetail;
-    /**
-     *
-     */
-
-    public Integer isDownload;
-    public Boolean isSelected = false;
-
-    public Integer nxDdgIsGbDepartment;
-    public Integer nxDdgGbDepartmentFatherId;
-    public Integer nxDdgGbDepartmentId;
-    public Integer nxDdgOrderSellerUserId;
-    public Integer nxDdgOrderBuyerUserId;
-    public Integer nxDdgNxDistributerId;
-    public Integer nxDdgGbDistributerId;
-    public NxDepartmentEntity nxDepartmentEntity;
-    public GbDepartmentEntity gbDepartmentEntity;
-
-
-
-   
 }
