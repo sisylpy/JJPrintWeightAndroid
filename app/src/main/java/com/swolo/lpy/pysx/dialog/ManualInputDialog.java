@@ -537,7 +537,7 @@ public class ManualInputDialog extends Dialog {
             // 验证选中订单的重量数据
             String weight = selectedOrder.getNxDoWeight();
             android.util.Log.d("ManualInputDialog", "[保存] 选中订单重量: " + weight);
-            if (weight == null || weight.isEmpty() || weight.equals("0.00") || weight.equals("0")) {
+            if (weight == null || weight.isEmpty() || weight.equals("0.0") || weight.equals("0")) {
                 android.util.Log.d("ManualInputDialog", "[保存] 选中订单重量无效，显示提示");
                 android.widget.Toast.makeText(mContext, "请为选中的订单输入重量", android.widget.Toast.LENGTH_SHORT).show();
                 return;

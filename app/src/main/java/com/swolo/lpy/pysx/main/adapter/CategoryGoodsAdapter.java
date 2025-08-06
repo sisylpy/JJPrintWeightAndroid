@@ -105,7 +105,7 @@ public class CategoryGoodsAdapter extends RecyclerView.Adapter<CategoryGoodsAdap
             holder.tvStandard.setVisibility(View.GONE);
         }
 
-        // 设置订单信息
+        // 设置订单信息（使用与货架模式相同的简洁显示方式）
         List<NxDepartmentOrdersEntity> orders = goods.getNxDepartmentOrdersEntities();
         if (orders != null && !orders.isEmpty()) {
             holder.llOrders.setVisibility(View.VISIBLE);
@@ -113,54 +113,42 @@ public class CategoryGoodsAdapter extends RecyclerView.Adapter<CategoryGoodsAdap
             
             for (NxDepartmentOrdersEntity order : orders) {
                 View orderView = LayoutInflater.from(holder.itemView.getContext())
-                        .inflate(R.layout.item_order_info, holder.llOrders, false);
+                        .inflate(R.layout.item_stock_out_order_display, holder.llOrders, false);
                 
-                TextView tvDepartment = orderView.findViewById(R.id.tv_department);
-                TextView tvQuantity = orderView.findViewById(R.id.tv_quantity);
-                TextView tvWeight = orderView.findViewById(R.id.tv_weight);
-                TextView tvRemark = orderView.findViewById(R.id.tv_remark);
-                
-                // 设置部门信息
-                String departmentName = "";
-                if (order.getNxDepartmentEntity() != null) {
-                    NxDepartmentEntity nxDep = order.getNxDepartmentEntity();
-                    if (nxDep.getFatherDepartmentEntity() != null) {
-                        departmentName = nxDep.getFatherDepartmentEntity().getNxDepartmentAttrName() + "." + nxDep.getNxDepartmentName();
-                    } else {
-                        departmentName = nxDep.getNxDepartmentName();
+                TextView departmentName = orderView.findViewById(R.id.tv_department_name);
+                TextView orderQuantity = orderView.findViewById(R.id.tv_order_quantity);
+                TextView remark = orderView.findViewById(R.id.tv_remark);
+
+                // 设置客户名，只显示部门名称，不显示简称（与货架模式一致）
+                String customerName = "";
+                if (order != null) {
+                    if (order.getNxDepartmentEntity() != null) {
+                        NxDepartmentEntity department = order.getNxDepartmentEntity();
+                        if (department.getFatherDepartmentEntity() != null) {
+                            customerName = department.getFatherDepartmentEntity().getNxDepartmentName();
+                        } else {
+                            customerName = department.getNxDepartmentName();
+                        }
+                    } else if (order.getGbDepartmentEntity() != null) {
+                        GbDepartmentEntity department = order.getGbDepartmentEntity();
+                        if (department.getFatherGbDepartmentEntity() != null && 
+                            department.getFatherGbDepartmentEntity().getGbDepartmentSubAmount() > 1) {
+                            customerName = department.getFatherGbDepartmentEntity().getGbDepartmentName();
+                        } else {
+                            customerName = department.getGbDepartmentName();
+                        }
                     }
-                } else if (order.getGbDepartmentEntity() != null) {
-                    GbDepartmentEntity gbDep = order.getGbDepartmentEntity();
-                    if (gbDep.getFatherGbDepartmentEntity() != null) {
-                        departmentName = gbDep.getFatherGbDepartmentEntity().getGbDepartmentName() + "." + gbDep.getGbDepartmentName();
-                    } else {
-                        departmentName = gbDep.getGbDepartmentName();
-                    }
                 }
-                tvDepartment.setText(departmentName);
-                
-                // 设置订货信息
-                String quantity = "订: " + (order.getNxDoQuantity() != null ? order.getNxDoQuantity() : 0) + 
-                               (order.getNxDoStandard() != null ? order.getNxDoStandard() : "");
-                tvQuantity.setText(quantity);
-                
-                // 设置出库信息
-                if (order.getNxDoWeight() != null) {
-                    String weight = "出: " + order.getNxDoWeight() + 
-                                  (goods.getNxDgGoodsStandardname() != null ? goods.getNxDgGoodsStandardname() : "");
-                    tvWeight.setText(weight);
-                } else {
-                    tvWeight.setText("出: ");
-                    tvWeight.setTextColor(holder.itemView.getContext().getResources().getColor(android.R.color.holo_red_light));
-                }
-                
-                // 设置备注信息
-                if (order.getNxDoRemark() != null && !order.getNxDoRemark().isEmpty()) {
-                    tvRemark.setVisibility(View.VISIBLE);
-                    tvRemark.setText("备注: " + order.getNxDoRemark());
-                } else {
-                    tvRemark.setVisibility(View.GONE);
-                }
+                departmentName.setText(customerName);
+
+                // 设置数量和单位，全部为绿色，不显示"订"字（与货架模式一致）
+                String quantity = String.valueOf(order.getNxDoQuantity()) + (order.getNxDoStandard() == null ? "" : order.getNxDoStandard());
+                android.text.SpannableString spannable = new android.text.SpannableString(quantity);
+                spannable.setSpan(new android.text.style.ForegroundColorSpan(0xFF20B384), 0, quantity.length(), android.text.SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE);
+                orderQuantity.setText(spannable);
+
+                // 隐藏备注（与货架模式一致）
+                remark.setVisibility(View.GONE);
                 
                 holder.llOrders.addView(orderView);
             }

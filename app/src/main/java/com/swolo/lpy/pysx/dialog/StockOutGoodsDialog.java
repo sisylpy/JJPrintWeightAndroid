@@ -9,6 +9,7 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import com.swolo.lpy.pysx.R;
@@ -332,8 +333,15 @@ public class StockOutGoodsDialog extends Dialog {
         // 自动重置去皮，每次弹窗都能自动去皮
         autoTareDone = false;
         tareWeight = 0;
-        setContentView(R.layout.dialog_stock_out_goods);
-        Log.d(TAG, "[弹窗] onCreate: setContentView完成");
+        
+        // 【新增】根据用户设置选择布局文件
+        int layoutResId = getLayoutBasedOnOrientation();
+        Log.d(TAG, "[弹窗] onCreate: 选择的布局ID: " + layoutResId);
+        Log.d(TAG, "[弹窗] onCreate: 布局名称: " + (layoutResId == R.layout.dialog_stock_out_goods ? "竖屏布局" : "横屏布局"));
+        Log.d(TAG, "[弹窗] onCreate: 竖屏布局ID: " + R.layout.dialog_stock_out_goods);
+        Log.d(TAG, "[弹窗] onCreate: 横屏布局ID: " + R.layout.dialog_stock_out_goods_landscape);
+        setContentView(layoutResId);
+        Log.d(TAG, "[弹窗] onCreate: setContentView完成，使用布局: " + layoutResId);
         
         // 【新增】应用横竖屏设置
         applyScreenOrientation();
@@ -383,12 +391,135 @@ public class StockOutGoodsDialog extends Dialog {
         
         // 设置标题
         tvTitle = findViewById(R.id.tv_goods_title);
+        TextView tvGoodsStandard = findViewById(R.id.tv_goods_standard);
+        TextView tvGoodsBrand = findViewById(R.id.tv_goods_brand);
+        
+        Log.d(TAG, "🔍 tvTitle: " + (tvTitle != null ? "找到" : "为null"));
+        Log.d(TAG, "🔍 tvGoodsStandard: " + (tvGoodsStandard != null ? "找到" : "为null"));
+        Log.d(TAG, "🔍 tvGoodsBrand: " + (tvGoodsBrand != null ? "找到" : "为null"));
+        Log.d(TAG, "🔍 goodsEntity: " + (goodsEntity != null ? "找到" : "为null"));
+        
         if (tvTitle != null && goodsEntity != null) {
             String goodsName = goodsEntity.getNxDistributerGoodsEntity().getNxDgGoodsName();
             Log.d("StockOutGoodsDialog", "设置商品标题: " + goodsName);
             tvTitle.setText(goodsName);
+            
+            // 设置商品品牌信息（参考微信小程序显示方式）
+            if (tvGoodsBrand != null) {
+                String brand = goodsEntity.getNxDistributerGoodsEntity().getNxDgGoodsBrand();
+                if (brand != null && !brand.isEmpty() && !"null".equals(brand)) {
+                    tvGoodsBrand.setText(brand);
+                    tvGoodsBrand.setVisibility(View.VISIBLE);
+                    Log.d("StockOutGoodsDialog", "设置商品品牌: " + brand);
+                } else {
+                    tvGoodsBrand.setVisibility(View.GONE);
+                    Log.d("StockOutGoodsDialog", "商品品牌为空，隐藏品牌显示");
+                }
+            }
+            
+            // 设置商品规格信息（参考微信小程序显示方式）
+            Log.d(TAG, "🔍 开始设置商品规格信息");
+            if (tvGoodsStandard != null) {
+                String standardWeight = goodsEntity.getNxDistributerGoodsEntity().getNxDgGoodsStandardWeight();
+                String standardName = goodsEntity.getNxDistributerGoodsEntity().getNxDgGoodsStandardname();
+                
+                Log.d("StockOutGoodsDialog", "=== 规格信息调试 ===");
+                Log.d("StockOutGoodsDialog", "standardWeight: '" + standardWeight + "'");
+                Log.d("StockOutGoodsDialog", "standardName: '" + standardName + "'");
+                Log.d("StockOutGoodsDialog", "standardWeight != null: " + (standardWeight != null));
+                Log.d("StockOutGoodsDialog", "standardWeight.isEmpty(): " + (standardWeight != null ? standardWeight.isEmpty() : "N/A"));
+                Log.d("StockOutGoodsDialog", "standardWeight.equals('null'): " + (standardWeight != null ? "null".equals(standardWeight) : "N/A"));
+                Log.d("StockOutGoodsDialog", "standardName != null: " + (standardName != null));
+                Log.d("StockOutGoodsDialog", "standardName.isEmpty(): " + (standardName != null ? standardName.isEmpty() : "N/A"));
+                Log.d("StockOutGoodsDialog", "standardName.equals('null'): " + (standardName != null ? "null".equals(standardName) : "N/A"));
+                Log.d("StockOutGoodsDialog", "standardName.equals('斤'): " + (standardName != null ? "斤".equals(standardName) : "N/A"));
+                
+                // 微信小程序逻辑：只有当standardWeight不为空且不为"null"时才显示
+                if (standardWeight != null && !standardWeight.isEmpty() && !"null".equals(standardWeight)) {
+                    Log.d("StockOutGoodsDialog", "✅ standardWeight条件满足");
+                    if (standardName != null && !standardName.isEmpty() && !"null".equals(standardName) && !"斤".equals(standardName)) {
+                        String standardText = "(" + standardWeight + "/" + standardName + ")";
+                        tvGoodsStandard.setText(standardText);
+                        tvGoodsStandard.setVisibility(View.VISIBLE);
+                        Log.d("StockOutGoodsDialog", "✅ 设置商品规格: " + standardText);
+                    } else {
+                        // 如果standardName为空或为"斤"，只显示weight
+                        String standardText = "(" + standardWeight + ")";
+                        tvGoodsStandard.setText(standardText);
+                        tvGoodsStandard.setVisibility(View.VISIBLE);
+                        Log.d("StockOutGoodsDialog", "✅ 设置商品规格: " + standardText);
+                    }
+                } else {
+                    tvGoodsStandard.setVisibility(View.GONE);
+                    Log.d("StockOutGoodsDialog", "❌ 商品规格weight为空，隐藏规格显示");
+                }
+                Log.d("StockOutGoodsDialog", "=== 规格信息调试结束 ===");
+            } else {
+                Log.d("StockOutGoodsDialog", "❌ tvGoodsStandard为null，无法设置规格信息");
+            }
         } else {
             Log.e("StockOutGoodsDialog", "商品实体为空或标题视图为空");
+        }
+
+        // 【新增】初始化返回按钮（横屏布局）
+        ImageButton btnBack = findViewById(R.id.btn_back);
+        if (btnBack != null) {
+            btnBack.setOnClickListener(v -> {
+                Log.d(TAG, "[返回按钮] 用户点击返回，关闭弹窗");
+                dismiss();
+            });
+            Log.d(TAG, "[返回按钮] 返回按钮绑定成功");
+        } else {
+            Log.d(TAG, "[返回按钮] 返回按钮不存在（竖屏布局）");
+        }
+
+        // 【新增】初始化关闭按钮（竖屏布局）
+        ImageButton btnClose = findViewById(R.id.btn_close);
+        if (btnClose != null) {
+            Log.d(TAG, "[关闭按钮] 找到关闭按钮，开始设置");
+            Log.d(TAG, "[关闭按钮] 按钮宽度: " + btnClose.getWidth() + ", 高度: " + btnClose.getHeight());
+            Log.d(TAG, "[关闭按钮] 按钮背景: " + btnClose.getBackground());
+            Log.d(TAG, "[关闭按钮] 按钮图标: " + btnClose.getDrawable());
+            Log.d(TAG, "[关闭按钮] 按钮可见性: " + btnClose.getVisibility());
+            Log.d(TAG, "[关闭按钮] 按钮padding: " + btnClose.getPaddingLeft() + "," + btnClose.getPaddingTop() + "," + btnClose.getPaddingRight() + "," + btnClose.getPaddingBottom());
+            
+            btnClose.setOnClickListener(v -> {
+                Log.d(TAG, "[关闭按钮] 用户点击关闭，关闭弹窗");
+                dismiss();
+            });
+            Log.d(TAG, "[关闭按钮] 关闭按钮绑定成功");
+            
+            // 【新增】在布局完成后重新检查按钮尺寸
+            btnClose.post(() -> {
+                Log.d(TAG, "[关闭按钮] 布局完成后重新检查");
+                Log.d(TAG, "[关闭按钮] 按钮宽度: " + btnClose.getWidth() + ", 高度: " + btnClose.getHeight());
+                Log.d(TAG, "[关闭按钮] 按钮布局参数: " + btnClose.getLayoutParams());
+                if (btnClose.getLayoutParams() != null) {
+                    Log.d(TAG, "[关闭按钮] 布局参数宽度: " + btnClose.getLayoutParams().width + ", 高度: " + btnClose.getLayoutParams().height);
+                }
+            });
+        } else {
+            Log.d(TAG, "[关闭按钮] 关闭按钮不存在（横屏布局）");
+        }
+
+        // 【新增】根据布局类型设置弹窗样式
+        if (getWindow() != null) {
+            // 读取横竖屏设置
+            SharedPreferences prefs = getContext().getSharedPreferences("settings_prefs", Context.MODE_PRIVATE);
+            int screenOrientation = prefs.getInt("screen_orientation", 0); // 默认竖屏
+            
+            if (screenOrientation == 1) {
+                // 横屏模式：设置全屏，去掉所有边距和背景（与手动输入弹窗保持一致）
+                getWindow().setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT);
+                getWindow().setDimAmount(0f); // 去掉蒙版
+                getWindow().setBackgroundDrawableResource(android.R.color.transparent); // 去掉背景
+                getWindow().setFlags(android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, 
+                                   android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS); // 允许内容超出状态栏
+                Log.d(TAG, "[弹窗] 横屏模式：设置全屏模式完成");
+            } else {
+                // 竖屏模式：保持原有的弹窗样式，有蒙版和背景
+                Log.d(TAG, "[弹窗] 竖屏模式：保持原有弹窗样式");
+            }
         }
 
         // ========== 蓝牙秤状态显示代码已删除（2025-07-08）==========
@@ -464,8 +595,8 @@ public class StockOutGoodsDialog extends Dialog {
             Log.d(TAG, "[弹窗] initView: 重置第一个订单重量为0");
             List<NxDepartmentOrdersEntity> orders = ordersAdapter.getOrders();
             if (orders != null && !orders.isEmpty()) {
-                Log.d(TAG, "[弹窗] initView: 直接设置第一个订单重量为0.00, 原重量=" + orders.get(0).getNxDoWeight());
-                orders.get(0).setNxDoWeight("0.00");
+                Log.d(TAG, "[弹窗] initView: 直接设置第一个订单重量为0.0, 原重量=" + orders.get(0).getNxDoWeight());
+                orders.get(0).setNxDoWeight("0.0");
                 Log.d(TAG, "[弹窗] initView: 设置后第一个订单重量=" + orders.get(0).getNxDoWeight());
             }
             ordersAdapter.updateWeightAtPosition(0, 0);
@@ -685,6 +816,15 @@ public class StockOutGoodsDialog extends Dialog {
     @Override
     public void dismiss() {
         Log.d(TAG, "[日志追踪] StockOutGoodsDialog.dismiss() 被调用");
+        
+        // 【新增】弹窗关闭时恢复屏幕方向设置
+        if (mContext instanceof Activity) {
+            Activity activity = (Activity) mContext;
+            // 恢复为自动模式，让系统根据用户设置决定方向
+            activity.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR);
+            Log.d(TAG, "[弹窗关闭] 恢复为自动屏幕方向");
+        }
+        
         closeGatt();
         Log.d(TAG, "[生命周期] dismiss: 注销广播");
         try {
@@ -1030,7 +1170,7 @@ public class StockOutGoodsDialog extends Dialog {
         // 验证选中订单的重量数据
         String weight = selectedOrder.getNxDoWeight();
         Log.d(TAG, "[确认按钮] 选中订单重量: " + weight);
-        if (weight == null || weight.isEmpty() || weight.equals("0.00") || weight.equals("0")) {
+        if (weight == null || weight.isEmpty() || weight.equals("0.0") || weight.equals("0")) {
             Log.e(TAG, "[确认按钮] 选中订单重量无效: " + weight);
             Toast.makeText(getContext(), "请为选中的订单输入重量", Toast.LENGTH_SHORT).show();
             return;
@@ -1205,6 +1345,53 @@ public class StockOutGoodsDialog extends Dialog {
         Log.d(TAG, "[刷新页面] ========== refreshPageData方法完成 ==========");
     }
     
+    /**
+     * 【新增】根据用户设置选择布局文件
+     */
+    private int getLayoutBasedOnOrientation() {
+        Log.d(TAG, "[弹窗] getLayoutBasedOnOrientation: 开始选择布局文件");
+        
+        try {
+            // 读取横竖屏设置
+            SharedPreferences prefs = getContext().getSharedPreferences("settings_prefs", Context.MODE_PRIVATE);
+            int screenOrientation = prefs.getInt("screen_orientation", 0); // 默认竖屏
+            
+            Log.d(TAG, "[弹窗] getLayoutBasedOnOrientation: 读取到横竖屏设置: " + screenOrientation);
+            Log.d(TAG, "[弹窗] getLayoutBasedOnOrientation: SharedPreferences文件: settings_prefs");
+            Log.d(TAG, "[弹窗] getLayoutBasedOnOrientation: 键名: screen_orientation");
+            
+            // 新的索引映射：0=竖屏，1=横屏
+            if (screenOrientation >= 2) {
+                screenOrientation = 0; // 如果索引超出范围，默认使用竖屏
+                Log.w(TAG, "[弹窗] getLayoutBasedOnOrientation: 设置值超出范围，重置为竖屏");
+            }
+            
+            int resultLayout;
+            switch (screenOrientation) {
+                case 0: // 竖屏
+                    resultLayout = R.layout.dialog_stock_out_goods;
+                    Log.d(TAG, "[弹窗] getLayoutBasedOnOrientation: 竖屏模式，使用竖屏布局: " + resultLayout);
+                    break;
+                case 1: // 横屏
+                    resultLayout = R.layout.dialog_stock_out_goods_landscape;
+                    Log.d(TAG, "[弹窗] getLayoutBasedOnOrientation: 横屏模式，使用横屏布局: " + resultLayout);
+                    break;
+                default:
+                    resultLayout = R.layout.dialog_stock_out_goods;
+                    Log.w(TAG, "[弹窗] getLayoutBasedOnOrientation: 未知设置，使用竖屏布局: " + resultLayout);
+                    break;
+            }
+            
+            Log.d(TAG, "[弹窗] getLayoutBasedOnOrientation: 最终选择的布局: " + resultLayout);
+            return resultLayout;
+        } catch (Exception e) {
+            Log.e(TAG, "[弹窗] getLayoutBasedOnOrientation: 选择布局文件失败", e);
+            int defaultLayout = R.layout.dialog_stock_out_goods;
+            Log.d(TAG, "[弹窗] getLayoutBasedOnOrientation: 异常情况下使用默认布局: " + defaultLayout);
+            return defaultLayout; // 默认使用竖屏布局
+        }
+    }
+
     /**
      * 【新增】应用横竖屏设置
      */

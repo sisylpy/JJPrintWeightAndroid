@@ -314,7 +314,7 @@ public class StockOutOrdersAdapter extends RecyclerView.Adapter<StockOutOrdersAd
                 
                 // 修复：确保重量是纯数字，避免重复显示
                 double weightInJin = weight / 500.0;  // 将克转换为斤
-                String newWeight = String.format("%.2f", weightInJin); // 只保留数字，不添加单位
+                String newWeight = String.format("%.1f", weightInJin); // 只保留1位小数，不添加单位
                 Log.d("StockOutOrdersAdapter", "[适配器] 重量转换: " + weight + "g -> " + weightInJin + " -> " + newWeight);
                 
                 // 更严格的防抖检查：如果重量变化很小，跳过更新
