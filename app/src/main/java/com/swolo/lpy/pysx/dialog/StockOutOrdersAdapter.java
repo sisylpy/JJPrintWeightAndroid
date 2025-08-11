@@ -287,12 +287,12 @@ public class StockOutOrdersAdapter extends RecyclerView.Adapter<StockOutOrdersAd
     }
 
     public void updateWeight(double weight) {
-        Log.d("StockOutOrdersAdapter", "updateWeight: weight=" + weight + ", selectedPosition=" + selectedPosition);
+        Log.d("StockOutOrdersAdapter", "updateWeight: weight=" + weight + "斤, selectedPosition=" + selectedPosition);
         if (selectedPosition >= 0 && selectedPosition < ordersList.size()) {
             NxDepartmentOrdersEntity order = ordersList.get(selectedPosition);
-            double weightInJin = weight / 500.0;  // 将克转换为斤
-            order.setNxDoWeight(String.format("%.2f", weightInJin)); // 去掉"斤"单位，只保留数字
-            Log.d("StockOutOrdersAdapter", "updateWeight: 赋值给订单, position=" + selectedPosition + ", weight=" + weightInJin);
+            // 现在weight已经是斤单位，直接使用，不需要转换
+            order.setNxDoWeight(String.format("%.1f", weight)); // 保留1位小数，不添加单位
+            Log.d("StockOutOrdersAdapter", "updateWeight: 赋值给订单, position=" + selectedPosition + ", weight=" + weight + "斤");
             notifyItemChanged(selectedPosition);
         } else {
             Log.d("StockOutOrdersAdapter", "updateWeight: selectedPosition无效, selectedPosition=" + selectedPosition);
@@ -301,7 +301,7 @@ public class StockOutOrdersAdapter extends RecyclerView.Adapter<StockOutOrdersAd
 
     public void updateWeightAtPosition(int position, double weight) {
         Log.d("StockOutOrdersAdapter", "[适配器] ========== updateWeightAtPosition开始 ==========");
-        Log.d("StockOutOrdersAdapter", "[适配器] 参数检查: position=" + position + ", weight=" + weight + ", ordersList.size=" + (ordersList != null ? ordersList.size() : 0));
+        Log.d("StockOutOrdersAdapter", "[适配器] 参数检查: position=" + position + ", weight=" + weight + "kg, ordersList.size=" + (ordersList != null ? ordersList.size() : 0));
         
         if (position >= 0 && position < ordersList.size()) {
             Log.d("StockOutOrdersAdapter", "[适配器] 位置有效，开始更新订单");
@@ -313,9 +313,9 @@ public class StockOutOrdersAdapter extends RecyclerView.Adapter<StockOutOrdersAd
                 Log.d("StockOutOrdersAdapter", "[适配器] 订单原重量: " + oldWeight);
                 
                 // 修复：确保重量是纯数字，避免重复显示
-                double weightInJin = weight / 500.0;  // 将克转换为斤
-                String newWeight = String.format("%.1f", weightInJin); // 只保留1位小数，不添加单位
-                Log.d("StockOutOrdersAdapter", "[适配器] 重量转换: " + weight + "g -> " + weightInJin + " -> " + newWeight);
+                // 现在weight已经是斤单位，直接使用，不需要转换
+                String newWeight = String.format("%.1f", weight); // 保留1位小数，不添加单位
+                Log.d("StockOutOrdersAdapter", "[适配器] 重量转换: " + weight + "斤 -> " + newWeight);
                 
                 // 更严格的防抖检查：如果重量变化很小，跳过更新
                 if (oldWeight != null && !oldWeight.isEmpty()) {
@@ -323,10 +323,12 @@ public class StockOutOrdersAdapter extends RecyclerView.Adapter<StockOutOrdersAd
                         String cleanOldWeight = oldWeight.replaceAll("[^0-9.]", "");
                         if (!cleanOldWeight.isEmpty()) {
                             double oldWeightValue = Double.parseDouble(cleanOldWeight);
-                            double weightDiff = Math.abs(weightInJin - oldWeightValue);
+                            // 现在weight已经是kg单位，直接比较
+                            double weightDiff = Math.abs(weight - oldWeightValue);
                             
-                            if (weightDiff < 0.01) {
-                                Log.d("StockOutOrdersAdapter", "[适配器] 重量变化太小，跳过更新: oldWeight=" + oldWeightValue + ", newWeight=" + weightInJin + ", diff=" + weightDiff);
+                            // 降低防抖阈值从0.01到0.001，确保小重量变化也能被更新
+                            if (weightDiff < 0.001) {
+                                Log.d("StockOutOrdersAdapter", "[适配器] 重量变化太小，跳过更新: oldWeight=" + oldWeightValue + "kg, newWeight=" + weight + "kg, diff=" + weightDiff);
                                 return;
                             }
                         }

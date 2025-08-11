@@ -599,7 +599,7 @@ public class StockOutGoodsDialog extends Dialog {
                 orders.get(0).setNxDoWeight("0.0");
                 Log.d(TAG, "[弹窗] initView: 设置后第一个订单重量=" + orders.get(0).getNxDoWeight());
             }
-            ordersAdapter.updateWeightAtPosition(0, 0);
+            ordersAdapter.updateWeightAtPosition(0, 0.0);
         }
         
         // 标记初始化完成，允许蓝牙秤数据更新
@@ -673,10 +673,10 @@ public class StockOutGoodsDialog extends Dialog {
         if (requestCode == REQUEST_SCALE_ACTIVITY && resultCode == android.app.Activity.RESULT_OK) {
             if (data != null && data.hasExtra("weight")) {
                     double weight = data.getDoubleExtra("weight", 0.0);
-                Log.d(TAG, "[弹窗] onActivityResult: 获取到蓝牙称重量 weight=" + weight);
+                Log.d(TAG, "[弹窗] onActivityResult: 获取到蓝牙称重量 weight=" + weight + "kg");
                 if (ordersAdapter != null) {
                     ordersAdapter.updateWeight(weight);
-                    Log.d(TAG, "[弹窗] onActivityResult: 调用ordersAdapter.updateWeight, weight=" + weight);
+                    Log.d(TAG, "[弹窗] onActivityResult: 调用ordersAdapter.updateWeight, weight=" + weight + "kg");
                 } else {
                     Log.d(TAG, "[弹窗] onActivityResult: ordersAdapter为null");
                 }
@@ -695,7 +695,7 @@ public class StockOutGoodsDialog extends Dialog {
     }
 
     public void setWeight(double weight) {
-        Log.d(TAG, "[弹窗] setWeight: weight=" + weight + ", isInitialized=" + isInitialized);
+        Log.d(TAG, "[弹窗] setWeight: weight=" + weight + "kg, isInitialized=" + isInitialized);
         
         // 如果还没初始化完成，忽略蓝牙秤数据
         if (!isInitialized) {
@@ -703,7 +703,12 @@ public class StockOutGoodsDialog extends Dialog {
             return;
         }
         
-        // 防抖机制：如果重量变化很小（小于0.01斤），跳过更新
+        // 将kg转换为斤 (1kg = 2斤)
+        double weightInJin = Math.round(weight * 2.0 * 10) / 10.0; // 保留1位小数
+        Log.d(TAG, "[弹窗] setWeight: 重量转换: " + weight + "kg -> " + weightInJin + "斤");
+        
+        // 防抖机制：如果重量变化很小（小于0.001斤），跳过更新
+        // 降低防抖阈值，确保小重量变化也能被正确更新
         if (ordersAdapter != null && ordersAdapter.getItemCount() > 0) {
             int selectedPosition = ordersAdapter.getSelectedPosition();
             if (selectedPosition >= 0 && selectedPosition < ordersAdapter.getOrders().size()) {
@@ -713,11 +718,12 @@ public class StockOutGoodsDialog extends Dialog {
                     if (currentWeightStr != null && !currentWeightStr.isEmpty()) {
                         try {
                             double currentWeight = Double.parseDouble(currentWeightStr.replaceAll("[^0-9.]", ""));
-                            double newWeightInJin = weight / 500.0;
-                            double weightDiff = Math.abs(newWeightInJin - currentWeight);
+                            // 比较斤单位的重量
+                            double weightDiff = Math.abs(weightInJin - currentWeight);
                             
-                            if (weightDiff < 0.01) {
-                                Log.d(TAG, "[弹窗] setWeight: 重量变化太小，跳过更新: current=" + currentWeight + ", new=" + newWeightInJin + ", diff=" + weightDiff);
+                            // 降低防抖阈值从0.01到0.001，确保小重量变化也能被更新
+                            if (weightDiff < 0.001) {
+                                Log.d(TAG, "[弹窗] setWeight: 重量变化太小，跳过更新: current=" + currentWeight + "斤, new=" + weightInJin + "斤, diff=" + weightDiff);
                                 return;
                             }
                         } catch (NumberFormatException e) {
@@ -734,8 +740,8 @@ public class StockOutGoodsDialog extends Dialog {
                 if (ordersAdapter != null && ordersAdapter.getItemCount() > 0) {
                     // 获取当前选中的位置，而不是硬编码位置0
                     int selectedPosition = ordersAdapter.getSelectedPosition();
-                    Log.d(TAG, "[弹窗] 更新选中订单重量: position=" + selectedPosition + ", weight=" + weight);
-                    ordersAdapter.updateWeightAtPosition(selectedPosition, weight);
+                    Log.d(TAG, "[弹窗] 更新选中订单重量: position=" + selectedPosition + ", weight=" + weightInJin + "斤");
+                    ordersAdapter.updateWeightAtPosition(selectedPosition, weightInJin);
                     // ========== updateScaleStatus调用已删除（2025-07-08）==========
                     // 功能说明：更新蓝牙秤状态显示
                     // 删除原因：用户要求删除弹窗上面的蓝牙秤状态区域
@@ -924,29 +930,54 @@ public class StockOutGoodsDialog extends Dialog {
             }
             
             final double realWeight = Math.round((rawWeight - tareWeight) * 10) / 10.0;
-            Log.d(TAG, "[蓝牙] 收到重量: " + realWeight + "g, 是否稳定: " + isStable);
+            // 将克转换为kg
+            final double realWeightInKg = realWeight / 1000.0;
+            Log.d(TAG, "[蓝牙] 收到重量: " + realWeightInKg + "kg (原始: " + realWeight + "g), 是否稳定: " + isStable);
             
             // 只有在重量稳定时才更新UI，减少闪烁
             if (isStable) {
                 Log.d(TAG, "[蓝牙] 重量稳定，准备写入输入框");
-                setWeight(realWeight);
+                setWeight(realWeightInKg);
             } else {
                 Log.d(TAG, "[蓝牙] 重量不稳定，跳过UI更新");
             }
         } else {
-            // 格式2: 尝试解析为简单的重量数据
+            // 格式2: 尝试解析为ASCII格式的重量数据
             Log.d(TAG, "[蓝牙] 尝试格式2解析");
             try {
                 // 假设数据是ASCII格式的重量字符串
                 String weightStr = new String(data).trim();
                 Log.d(TAG, "[蓝牙] ASCII解析: " + weightStr);
                 
-                // 尝试提取数字
-                String numericStr = weightStr.replaceAll("[^0-9.]", "");
-                if (!numericStr.isEmpty()) {
-                    double weight = Double.parseDouble(numericStr);
-                    Log.d(TAG, "[蓝牙] 解析到重量: " + weight + "g");
+                // 尝试提取数字和单位
+                // 匹配模式：数字.数字kg 或 数字.数字g
+                String pattern = "(\\d+\\.\\d+)\\s*(kg|g)";
+                java.util.regex.Pattern regex = java.util.regex.Pattern.compile(pattern);
+                java.util.regex.Matcher matcher = regex.matcher(weightStr);
+                
+                if (matcher.find()) {
+                    double weight = Double.parseDouble(matcher.group(1));
+                    String unit = matcher.group(2);
+                    
+                    // 统一转换为kg单位
+                    if ("g".equalsIgnoreCase(unit)) {
+                        weight = weight / 1000.0; // g转kg
+                        Log.d(TAG, "[蓝牙] 解析到重量: " + weight + "kg (原始: " + matcher.group(1) + unit + ")");
+                    } else if ("kg".equalsIgnoreCase(unit)) {
+                        // 已经是kg单位，直接使用
+                        Log.d(TAG, "[蓝牙] 解析到重量: " + weight + "kg (原始: " + matcher.group(1) + unit + ")");
+                    }
+                    
                     setWeight(weight);
+                } else {
+                    // 如果没有找到标准格式，尝试提取纯数字
+                    String numericStr = weightStr.replaceAll("[^0-9.]", "");
+                    if (!numericStr.isEmpty()) {
+                        double weight = Double.parseDouble(numericStr);
+                        // 假设纯数字是kg单位（根据用户说明）
+                        Log.d(TAG, "[蓝牙] 解析到纯数字重量(假设kg): " + weight + "kg");
+                        setWeight(weight);
+                    }
                 }
             } catch (Exception e) {
                 Log.e(TAG, "[蓝牙] ASCII解析失败", e);
@@ -990,8 +1021,8 @@ public class StockOutGoodsDialog extends Dialog {
             String weight = order.getNxDoWeight();
             if (weight != null && !weight.isEmpty()) {
                 try {
-                    // 移除"斤"字，只保留数字部分
-                    String cleanWeight = weight.replace("斤", "").trim();
+                    // 移除"kg"字，只保留数字部分（现在重量单位是kg）
+                    String cleanWeight = weight.replace("kg", "").trim();
                     if (!cleanWeight.isEmpty() && Double.parseDouble(cleanWeight) > 0) {
                         validOrders.add(order);
                     }
