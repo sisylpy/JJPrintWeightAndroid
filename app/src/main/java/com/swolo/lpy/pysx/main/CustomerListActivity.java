@@ -127,6 +127,14 @@ public class CustomerListActivity extends AppCompatActivity {
                     if (swipeRefreshLayout != null) {
                         swipeRefreshLayout.setRefreshing(false);
                     }
+                    // 清空数据列表（避免显示过期数据）
+                    customerList.clear();
+                    nxDepList.clear();
+                    // 通知Adapter刷新UI
+                    if (adapter != null) {
+                        adapter.notifyDataSetChanged();
+                        Log.d("CustomerList", "加载失败，已清空客户列表并刷新UI");
+                    }
                     // 出错时重置选中状态
                     selectedIndexes.clear();
                     btnNext.setVisibility(View.GONE);
@@ -179,6 +187,17 @@ public class CustomerListActivity extends AppCompatActivity {
                         btnNext.setVisibility(View.GONE);
                     } else {
                         Log.d("CustomerList", "没有客户数据");
+                        // 清空数据列表
+                        customerList.clear();
+                        nxDepList.clear();
+                        // 通知Adapter刷新UI
+                        if (adapter != null) {
+                            adapter.notifyDataSetChanged();
+                            Log.d("CustomerList", "已清空客户列表并刷新UI");
+                        }
+                        // 重置选中状态
+                        selectedIndexes.clear();
+                        btnNext.setVisibility(View.GONE);
                         Toast.makeText(CustomerListActivity.this, "没有客户数据", Toast.LENGTH_SHORT).show();
                     }
                 }
@@ -216,13 +235,14 @@ public class CustomerListActivity extends AppCompatActivity {
                 // 保存选中的客户信息到缓存
                 saveSelectedCustomersToCache();
                 
-                // 跳转到出库页面
+                // 跳转到出库页面（使用 startActivityForResult，以便返回时刷新）
                 Intent intent = new Intent(CustomerListActivity.this, CustomerStockOutActivity.class);
                 // 传递分销商ID
                 SharedPreferences sp = getSharedPreferences("user_info", MODE_PRIVATE);
                 int disId = sp.getInt("distributer_id", -1);
                 intent.putExtra("distributer_id", disId);
-                startActivity(intent);
+                startActivityForResult(intent, 1002); // requestCode=1002 表示出库页面
+                Log.d("CustomerList", "使用 startActivityForResult 跳转，requestCode=1002");
             }
         });
     }
@@ -268,9 +288,28 @@ public class CustomerListActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        
         if (requestCode == 1001 && resultCode == RESULT_OK) {
             // 从部门列表页面返回，重新加载数据
             Log.d("CustomerList", "从部门列表页面返回，重新加载数据");
+            initData();
+        } else if (requestCode == 1002) {
+            // 从出库页面返回，刷新客户列表并清除选中状态
+            Log.d("CustomerList", "从出库页面返回，刷新数据并清除选中状态");
+            
+            // 清除选中状态
+            selectedIndexes.clear();
+            if (adapter != null) {
+                adapter.clearSelection();
+                Log.d("CustomerList", "已清除适配器选中状态");
+            }
+            
+            // 隐藏"下一步"按钮
+            btnNext.setVisibility(View.GONE);
+            Log.d("CustomerList", "已隐藏下一步按钮");
+            
+            // 重新加载数据
+            Log.d("CustomerList", "开始重新加载客户数据");
             initData();
         }
     }

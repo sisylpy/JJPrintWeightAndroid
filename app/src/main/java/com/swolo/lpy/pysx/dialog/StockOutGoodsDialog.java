@@ -8,6 +8,7 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -98,6 +99,7 @@ public class StockOutGoodsDialog extends Dialog {
 
     private double tareWeight = 0;
     private boolean autoTareDone = false;
+    private OnSwitchToManualListener switchToManualListener;
     
     // 蓝牙秤连接相关
     private BluetoothGatt bluetoothGatt;
@@ -607,7 +609,18 @@ public class StockOutGoodsDialog extends Dialog {
         Log.d(TAG, "[弹窗] initView: 初始化完成，允许蓝牙秤数据更新");
 
         // 设置确认按钮
-        TextView btnConfirm = findViewById(R.id.btn_confirm);
+        Button btnSwitchManual = findViewById(R.id.btn_switch_manual);
+        if (btnSwitchManual != null) {
+            Log.d(TAG, "[手动输入按钮] 找到切换按钮，设置点击事件");
+            btnSwitchManual.setOnClickListener(v -> {
+                Log.d(TAG, "[手动输入按钮] 用户点击了切换到手动输入");
+                handleSwitchToManual();
+            });
+        } else {
+            Log.w(TAG, "[手动输入按钮] 未找到btn_switch_manual");
+        }
+
+        Button btnConfirm = findViewById(R.id.btn_confirm);
         if (btnConfirm != null) {
             Log.d(TAG, "[确认按钮] 找到确认按钮，设置点击事件");
             Log.d(TAG, "[确认按钮] 按钮ID: " + R.id.btn_confirm);
@@ -669,6 +682,27 @@ public class StockOutGoodsDialog extends Dialog {
         Log.d(TAG, "[弹窗] initView: 视图初始化完成");
     }
 
+    private void handleSwitchToManual() {
+        Log.d(TAG, "[手动输入按钮] handleSwitchToManual: 开始执行切换逻辑");
+
+        if (switchToManualListener == null) {
+            Log.w(TAG, "[手动输入按钮] switchToManualListener为空，未能切换到手动输入");
+            Toast.makeText(getContext(), "无法切换到手动输入模式", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        NxDistributerGoodsShelfGoodsEntity currentGoods = goodsEntity;
+
+        try {
+            dismiss();
+        } catch (Exception e) {
+            Log.e(TAG, "[手动输入按钮] 关闭蓝牙称弹窗失败", e);
+        }
+
+        Log.d(TAG, "[手动输入按钮] 通知监听器切换到手动输入");
+        switchToManualListener.onSwitchToManual(currentGoods);
+    }
+
     public void onActivityResult(int requestCode, int resultCode, android.content.Intent data) {
         if (requestCode == REQUEST_SCALE_ACTIVITY && resultCode == android.app.Activity.RESULT_OK) {
             if (data != null && data.hasExtra("weight")) {
@@ -692,6 +726,14 @@ public class StockOutGoodsDialog extends Dialog {
 
     public void setOnConfirmListener(OnConfirmListener listener) {
         this.confirmListener = listener;
+    }
+
+    public interface OnSwitchToManualListener {
+        void onSwitchToManual(NxDistributerGoodsShelfGoodsEntity goodsEntity);
+    }
+
+    public void setOnSwitchToManualListener(OnSwitchToManualListener listener) {
+        this.switchToManualListener = listener;
     }
 
     public void setWeight(double weight) {

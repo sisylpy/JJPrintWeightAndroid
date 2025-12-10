@@ -197,46 +197,44 @@ public class CustomerStockOutActivity extends AppCompatActivity {
             // 初始化加载蒙版
             mLoadingDialog = new CommonLoadingDialog(this);
             
-            // 异步连接打印机，避免阻塞主线程
-            new Thread(() -> {
-                long printerStart = System.currentTimeMillis();
-                autoConnectPrinter();
-                Log.d("PERF", "autoConnectPrinter耗时: " + (System.currentTimeMillis() - printerStart) + "ms");
-                
-                // 连接完成后在主线程更新UI
-                runOnUiThread(() -> {
-                    Log.d(TAG, "[异步] ========== 打印机连接完成，开始更新UI ==========");
-                    Log.d(TAG, "[异步] 🔍 异步回调中的状态检查:");
-                    Log.d(TAG, "[异步] - isPrinterConnected: " + isPrinterConnected);
-                    Log.d(TAG, "[异步] - isPrintMode: " + isPrintMode);
-                    
-                    determinePrintMode();
-                    Log.d(TAG, "[异步] ✅ determinePrintMode() 执行完成");
-                    
-                    updateModeStatus();
-                    Log.d(TAG, "[异步] ✅ updateModeStatus() 执行完成");
-                    
-                    Log.d("PERF", "after determinePrintMode: " + System.currentTimeMillis());
-                    
-                    // 如果打印机连接成功，显示提示
-                    if (isPrinterConnected) {
-                        Toast.makeText(CustomerStockOutActivity.this, "打印机已连接", Toast.LENGTH_SHORT).show();
-                        Log.d(TAG, "[异步] ✅ 显示打印机连接成功提示");
-                    } else {
-                        Log.d(TAG, "[异步] ❌ 打印机连接失败，显示非打印模式");
-                    }
-                    Log.d(TAG, "[异步] ========== 异步回调完成 ==========");
-                });
-            }).start();
-            
             // 立即加载数据，不等待打印机连接
             long dataStart = System.currentTimeMillis();
             loadStockGoodsData();
             Log.d("PERF", "loadStockGoodsData耗时: " + (System.currentTimeMillis() - dataStart) + "ms");
             
-            // 设置初始模式状态（不依赖打印机）
-            // 注意：这里不调用updateModeStatus()，因为打印机连接是异步的
-            // updateModeStatus()会在异步连接完成后调用
+            // 【优化】先显示初始状态，让页面立即可用
+            determinePrintMode();
+            updateModeStatus();
+            Log.d(TAG, "[初始化] 初始模式状态已设置，页面可立即使用");
+            
+            // 异步连接打印机（完全后台，不阻塞UI）
+            new Thread(() -> {
+                long printerStart = System.currentTimeMillis();
+                Log.d(TAG, "[打印机] 后台开始连接打印机...");
+                
+                autoConnectPrinter();
+                
+                Log.d("PERF", "autoConnectPrinter耗时: " + (System.currentTimeMillis() - printerStart) + "ms");
+                
+                // 连接完成后在主线程静默更新状态
+                runOnUiThread(() -> {
+                    Log.d(TAG, "[异步] ========== 打印机连接完成，静默更新状态 ==========");
+                    Log.d(TAG, "[异步] isPrinterConnected: " + isPrinterConnected);
+                    
+                    // 重新判断打印模式
+                    determinePrintMode();
+                    updateModeStatus();
+                    
+                    // 静默提示
+                    if (isPrinterConnected) {
+                        Toast.makeText(CustomerStockOutActivity.this, "打印机已连接", Toast.LENGTH_SHORT).show();
+                        Log.d(TAG, "[异步] ✅ 打印机连接成功");
+                    } else {
+                        Log.d(TAG, "[异步] ⚠️ 打印机未连接，使用非打印模式");
+                    }
+                    Log.d(TAG, "[异步] ========== 状态更新完成 ==========");
+                });
+            }).start();
             
             Log.d("PERF", "onCreate end: " + System.currentTimeMillis() + ", 总耗时: " + (System.currentTimeMillis() - perfStart) + "ms");
         } catch (Exception e) {
@@ -244,6 +242,64 @@ public class CustomerStockOutActivity extends AppCompatActivity {
             Toast.makeText(this, "页面初始化失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             finish();
         }
+    }
+
+    private void openManualInputDialog(NxDistributerGoodsShelfGoodsEntity goods) {
+        Log.d(TAG, "[日志追踪] 选择弹出人工输入弹窗 ManualInputDialog");
+        List<NxDepartmentOrdersEntity> ordersForManual = getOrderListForGoods(goods);
+        ManualInputDialog dialog = new ManualInputDialog(this, goods, ordersForManual);
+        dialog.setOnConfirmListener(orders -> {
+            Log.d(TAG, "[日志追踪] ManualInputDialog 确认回调, 订单数量: " + (orders != null ? orders.size() : 0));
+            if (orders != null && !orders.isEmpty()) {
+                for (int i = 0; i < orders.size(); i++) {
+                    NxDepartmentOrdersEntity order = orders.get(i);
+                    Log.d(TAG, "[日志追踪] ManualInputDialog 订单" + (i + 1) + "详情: orderId=" + order.getNxDepartmentOrdersId() + ", weight=" + order.getNxDoWeight());
+                }
+                if (isPrintMode) {
+                    Log.d(TAG, "[日志追踪] ManualInputDialog 打印模式，调用printAndSaveOrders");
+                    printAndSaveOrders(orders, 0);
+                } else {
+                    Log.d(TAG, "[日志追踪] ManualInputDialog 非打印模式，直接保存订单");
+                    saveOrdersToServer(orders);
+                }
+            }
+        });
+        dialog.setOnDismissListener(dialogInterface -> {
+            Log.d(TAG, "[日志追踪] ManualInputDialog onDismiss");
+            currentDialog = null;
+        });
+        dialog.show();
+        Log.d(TAG, "[日志追踪] ManualInputDialog.show() 调用");
+        currentDialog = dialog;
+    }
+
+    private void openManualInputDialogForCategory(NxDistributerGoodsEntity goods) {
+        Log.d(TAG, "[日志追踪] 选择弹出人工输入弹窗 ManualInputDialog（类别模式）");
+        List<NxDepartmentOrdersEntity> orderList = getOrderListForCategoryGoods(goods);
+        ManualInputDialog dialog = new ManualInputDialog(this, goods, orderList);
+        dialog.setOnConfirmListener(orders -> {
+            Log.d(TAG, "[日志追踪] ManualInputDialog 确认回调, 订单数量: " + (orders != null ? orders.size() : 0));
+            if (orders != null && !orders.isEmpty()) {
+                for (int i = 0; i < orders.size(); i++) {
+                    NxDepartmentOrdersEntity order = orders.get(i);
+                    Log.d(TAG, "[日志追踪] ManualInputDialog 订单" + (i + 1) + "详情: orderId=" + order.getNxDepartmentOrdersId() + ", weight=" + order.getNxDoWeight());
+                }
+                if (isPrintMode) {
+                    Log.d(TAG, "[日志追踪] ManualInputDialog 打印模式，调用printAndSaveOrders");
+                    printAndSaveOrders(orders, 0);
+                } else {
+                    Log.d(TAG, "[日志追踪] ManualInputDialog 非打印模式，直接保存订单");
+                    saveOrdersToServer(orders);
+                }
+            }
+        });
+        dialog.setOnDismissListener(dialogInterface -> {
+            Log.d(TAG, "[日志追踪] ManualInputDialog onDismiss");
+            currentDialog = null;
+        });
+        dialog.show();
+        Log.d(TAG, "[日志追踪] ManualInputDialog.show() 调用");
+        currentDialog = dialog;
     }
 
     /**
@@ -371,6 +427,7 @@ public class CustomerStockOutActivity extends AppCompatActivity {
         // 返回按钮
         findViewById(R.id.iv_avatar).setOnClickListener(v -> {
             Log.d(TAG, "[事件] 点击返回按钮");
+            setResult(RESULT_OK); // 设置返回结果，触发客户列表刷新
             finish();
         });
         
@@ -573,6 +630,7 @@ public class CustomerStockOutActivity extends AppCompatActivity {
                                 if (categoryList.isEmpty()) {
                                     Log.w(TAG, "[数据] 商品类别列表为空，清除缓存并返回");
                                     clearCustomerCache();
+                                    setResult(RESULT_OK); // 设置返回结果，触发客户列表刷新
                                     finish();
                                 } else {
                                     updateUI();
@@ -618,6 +676,7 @@ public class CustomerStockOutActivity extends AppCompatActivity {
                                 if (shelfList.isEmpty()) {
                                     Log.w(TAG, "[数据] 货架列表为空，清除缓存并返回");
                                     clearCustomerCache();
+                                    setResult(RESULT_OK); // 设置返回结果，触发客户列表刷新
                                     finish();
                                 } else {
                                     updateUI();
@@ -945,6 +1004,17 @@ public class CustomerStockOutActivity extends AppCompatActivity {
                     }
                 }
             });
+            dialog.setOnSwitchToManualListener(manualGoods -> {
+                Log.d(TAG, "[日志追踪] StockOutGoodsDialog 用户请求切换到手动输入");
+                runOnUiThread(() -> {
+                    if (manualGoods != null) {
+                        openManualInputDialog(manualGoods);
+                    } else {
+                        Log.w(TAG, "[日志追踪] 切换手动输入时收到空的商品实体");
+                        Toast.makeText(this, "无法切换到手动输入模式", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            });
             dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
                 @Override
                 public void onDismiss(DialogInterface dialog) {
@@ -956,34 +1026,7 @@ public class CustomerStockOutActivity extends AppCompatActivity {
             Log.d(TAG, "[日志追踪] StockOutGoodsDialog.show() 调用");
             currentDialog = dialog;
         } else {
-            Log.d(TAG, "[日志追踪] 选择弹出人工输入弹窗 ManualInputDialog");
-            ManualInputDialog dialog = new ManualInputDialog(this, goods, getOrderListForGoods(goods));
-            dialog.setOnConfirmListener(orders -> {
-                Log.d(TAG, "[日志追踪] ManualInputDialog 确认回调, 订单数量: " + (orders != null ? orders.size() : 0));
-                if (orders != null && !orders.isEmpty()) {
-                    for (int i = 0; i < orders.size(); i++) {
-                        NxDepartmentOrdersEntity order = orders.get(i);
-                        Log.d(TAG, "[日志追踪] ManualInputDialog 订单" + (i+1) + "详情: orderId=" + order.getNxDepartmentOrdersId() + ", weight=" + order.getNxDoWeight());
-                    }
-                    if (isPrintMode) {
-                        Log.d(TAG, "[日志追踪] ManualInputDialog 打印模式，调用printAndSaveOrders");
-                        printAndSaveOrders(orders, 0);
-                    } else {
-                        Log.d(TAG, "[日志追踪] ManualInputDialog 非打印模式，直接保存订单");
-                        saveOrdersToServer(orders);
-                    }
-                }
-            });
-            dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
-                @Override
-                public void onDismiss(DialogInterface dialog) {
-                    Log.d(TAG, "[日志追踪] ManualInputDialog onDismiss");
-                    currentDialog = null;
-                }
-            });
-            dialog.show();
-            Log.d(TAG, "[日志追踪] ManualInputDialog.show() 调用");
-            currentDialog = dialog;
+            openManualInputDialog(goods);
         }
     }
 
@@ -1026,6 +1069,10 @@ public class CustomerStockOutActivity extends AppCompatActivity {
                     }
                 }
             });
+            dialog.setOnSwitchToManualListener(manualGoods -> {
+                Log.d(TAG, "[日志追踪] StockOutGoodsDialog（类别） 用户请求切换到手动输入");
+                runOnUiThread(() -> openManualInputDialogForCategory(goods));
+            });
             dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
                 @Override
                 public void onDismiss(DialogInterface dialog) {
@@ -1037,35 +1084,7 @@ public class CustomerStockOutActivity extends AppCompatActivity {
             Log.d(TAG, "[日志追踪] StockOutGoodsDialog.show() 调用");
             currentDialog = dialog;
         } else {
-            Log.d(TAG, "[日志追踪] 选择弹出人工输入弹窗 ManualInputDialog");
-            List<NxDepartmentOrdersEntity> orderList = getOrderListForCategoryGoods(goods);
-            ManualInputDialog dialog = new ManualInputDialog(this, goods, orderList);
-            dialog.setOnConfirmListener(orders -> {
-                Log.d(TAG, "[日志追踪] ManualInputDialog 确认回调, 订单数量: " + (orders != null ? orders.size() : 0));
-                if (orders != null && !orders.isEmpty()) {
-                    for (int i = 0; i < orders.size(); i++) {
-                        NxDepartmentOrdersEntity order = orders.get(i);
-                        Log.d(TAG, "[日志追踪] ManualInputDialog 订单" + (i+1) + "详情: orderId=" + order.getNxDepartmentOrdersId() + ", weight=" + order.getNxDoWeight());
-                    }
-                    if (isPrintMode) {
-                        Log.d(TAG, "[日志追踪] ManualInputDialog 打印模式，调用printAndSaveOrders");
-                        printAndSaveOrders(orders, 0);
-                    } else {
-                        Log.d(TAG, "[日志追踪] ManualInputDialog 非打印模式，直接保存订单");
-                        saveOrdersToServer(orders);
-                    }
-                }
-            });
-            dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
-                @Override
-                public void onDismiss(DialogInterface dialog) {
-                    Log.d(TAG, "[日志追踪] ManualInputDialog onDismiss");
-                    currentDialog = null;
-                }
-            });
-            dialog.show();
-            Log.d(TAG, "[日志追踪] ManualInputDialog.show() 调用");
-            currentDialog = dialog;
+            openManualInputDialogForCategory(goods);
         }
     }
 
@@ -1204,7 +1223,28 @@ public class CustomerStockOutActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        Log.d(TAG, "[生命周期] onDestroy");
+        Log.d(TAG, "[生命周期] onDestroy - 开始清理资源");
+        
+        // 关闭加载蒙版，防止内存泄漏
+        try {
+            if (mLoadingDialog != null && mLoadingDialog.isShowing()) {
+                Log.d(TAG, "[Loading] 关闭加载蒙版");
+                mLoadingDialog.dismiss();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "[Loading] 关闭加载蒙版失败", e);
+        }
+        
+        // 断开打印机连接
+        try {
+            Log.d(TAG, "[打印机] 断开所有打印机连接");
+            DeviceConnFactoryManager.closeAllPort();
+            Log.d(TAG, "[打印机] ✅ 打印机连接已断开");
+        } catch (Exception e) {
+            Log.e(TAG, "[打印机] 断开连接时出错", e);
+        }
+        
+        Log.d(TAG, "[生命周期] onDestroy - 资源清理完成");
     }
 
     @Override
@@ -1365,9 +1405,17 @@ public class CustomerStockOutActivity extends AppCompatActivity {
 
         ThreadPool.getInstantiation().addTask(() -> {
             try {
-                DeviceConnFactoryManager manager = DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0];
+                // 防护：检查管理器数组
+                DeviceConnFactoryManager[] managers = DeviceConnFactoryManager.getDeviceConnFactoryManagers();
+                if (managers == null || managers.length == 0) {
+                    Log.e(TAG, "【打印】打印机管理器数组为空或长度为0");
+                    callback.onPrintFail("打印机管理器未初始化");
+                    return;
+                }
+                
+                DeviceConnFactoryManager manager = managers[0];
                 if (manager == null) {
-                    Log.e(TAG, "【打印】打印机管理器为空");
+                    Log.e(TAG, "【打印】打印机管理器实例为空");
                     callback.onPrintFail("打印机管理器未初始化");
                     return;
                 }
@@ -1429,16 +1477,32 @@ public class CustomerStockOutActivity extends AppCompatActivity {
     }
 
     private boolean checkPrinterStatus() {
-        if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0] == null) {
+        try {
+            // 防护：检查管理器数组是否存在
+            DeviceConnFactoryManager[] managers = DeviceConnFactoryManager.getDeviceConnFactoryManagers();
+            if (managers == null || managers.length == 0) {
+                Log.e(TAG, "【打印】打印机管理器数组为空");
+                return false;
+            }
+            
+            // 防护：检查管理器实例是否存在
+            if (managers[0] == null) {
+                Log.e(TAG, "【打印】打印机管理器实例为空");
+                return false;
+            }
+            
+            // 检查连接状态
+            if (!managers[0].getConnState()) {
+                Log.e(TAG, "【打印】打印机未连接");
+                connectPrinter();
+                return false;
+            }
+            
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, "【打印】检查打印机状态时异常", e);
             return false;
         }
-        
-        if (!DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].getConnState()) {
-            connectPrinter();
-            return false;
-        }
-        
-        return true;
     }
     /**
      * 执行严谨的打印机测试
@@ -1890,15 +1954,15 @@ public class CustomerStockOutActivity extends AppCompatActivity {
             // index: 0,1,2,3
             int[][] PAPER_SIZE_CM = {
                 {4, 3}, // 4×3cm 横
-                {6, 4}, // 6×4cm 横
                 {4, 6}, // 4×6cm 竖
-                {5, 8}  // 5×8cm 竖
+                {5, 8}, // 5×8cm 竖
+                {8, 5}  // 8×5cm 横（宽度80mm，高度50mm）
             };
             String[] PAPER_SIZE_OPTIONS = {
                 "4×3cm（横）",
-                "6×4cm（横）",
                 "4×6cm（竖）",
-                "5×8cm（竖）"
+                "5×8cm（竖）",
+                "8×5cm（横）"
             };
             SharedPreferences prefs = getSharedPreferences("settings_prefs", MODE_PRIVATE);
             int paperSizeIndex = prefs.getInt("paper_size", 0);
@@ -1934,12 +1998,12 @@ public class CustomerStockOutActivity extends AppCompatActivity {
             PrintLayoutParams[] LAYOUT_PARAMS = new PrintLayoutParams[] {
                     // 4×3cm 横 - 小尺寸，紧凑布局
                     new PrintLayoutParams(10, 60, 1, 10, 100, 1, 10, 140, 1, LabelCommand.ROTATION.ROTATION_0),
-                    // 6×4cm 横 - 中等尺寸，标准布局
-                    new PrintLayoutParams(80, 150, 2, 80, 250, 2, 80, 350, 2, LabelCommand.ROTATION.ROTATION_0),
                     // 4×6cm 竖 - 竖版，垂直布局
                     new PrintLayoutParams(40, 440, 2, 120, 440, 2, 200, 440, 2, LabelCommand.ROTATION.ROTATION_270),
                     // 5×8cm 竖 - 大尺寸，宽松布局
-                    new PrintLayoutParams(150, 60, 3, 300, 60, 3, 450, 60, 3, LabelCommand.ROTATION.ROTATION_270),
+                    new PrintLayoutParams(40, 550, 3, 120, 550, 3, 200, 550, 3, LabelCommand.ROTATION.ROTATION_270),
+                    // 8×5cm 横 - 宽度80mm，高度50mm，打印3行，字体2倍
+                    new PrintLayoutParams(10, 60, 2, 10, 140, 2, 10, 220, 2, LabelCommand.ROTATION.ROTATION_0),
             };
             PrintLayoutParams params = LAYOUT_PARAMS[paperSizeIndex];
             Log.i(TAG, "【打印布局参数】index=" + paperSizeIndex + ", xCustomer=" + params.xCustomer + ", yCustomer=" + params.yCustomer + ", fontCustomer=" + params.fontCustomer + ", rotation=" + params.rotation);
@@ -1948,42 +2012,76 @@ public class CustomerStockOutActivity extends AppCompatActivity {
             // ========== END ==========
 
             // ========== 新打印内容（客户、商品、重量） ==========
-            String customerName = getDepartmentName(order);
-            String goodsName = order.getNxDistributerGoodsEntity() != null ? order.getNxDistributerGoodsEntity().getNxDgGoodsName() : "";
-            String standard = order.getNxDistributerGoodsEntity() != null ? order.getNxDistributerGoodsEntity().getNxDgGoodsStandardname() : "";
-            String weight = order.getNxDoWeight() != null ? order.getNxDoWeight() : "0";
-            String weightStandard = order.getNxDoStandard() != null ? order.getNxDoStandard() : "";
             
-            Log.i(TAG, "【打印内容】客户: " + customerName);
-            Log.i(TAG, "【打印内容】商品: " + goodsName);
-            Log.i(TAG, "【打印内容】重量: " + weight + weightStandard);
+            // 判断是否为横版小标签（4×3cm）
+            boolean isHorizontalSmall = (paperSizeIndex == 0);
             
-            // 获取字体倍数枚举
-            LabelCommand.FONTMUL customerFont = params.fontCustomer == 1 ? LabelCommand.FONTMUL.MUL_1 :
-                                             params.fontCustomer == 2 ? LabelCommand.FONTMUL.MUL_2 :
-                                             params.fontCustomer == 3 ? LabelCommand.FONTMUL.MUL_3 :
-                                             params.fontCustomer == 4 ? LabelCommand.FONTMUL.MUL_4 : LabelCommand.FONTMUL.MUL_1;
-            LabelCommand.FONTMUL goodsFont = params.fontGoods == 1 ? LabelCommand.FONTMUL.MUL_1 :
-                                           params.fontGoods == 2 ? LabelCommand.FONTMUL.MUL_2 :
-                                           params.fontGoods == 3 ? LabelCommand.FONTMUL.MUL_3 :
-                                           params.fontGoods == 4 ? LabelCommand.FONTMUL.MUL_4 : LabelCommand.FONTMUL.MUL_1;
-            LabelCommand.FONTMUL weightFont = params.fontQty == 1 ? LabelCommand.FONTMUL.MUL_1 :
-                                            params.fontQty == 2 ? LabelCommand.FONTMUL.MUL_2 :
-                                            params.fontQty == 3 ? LabelCommand.FONTMUL.MUL_3 :
-                                            params.fontQty == 4 ? LabelCommand.FONTMUL.MUL_4 : LabelCommand.FONTMUL.MUL_1;
+            Log.i(TAG, "【打印模式判断】paperSizeIndex=" + paperSizeIndex + ", 纸张尺寸=" + paperSizeText);
+            Log.i(TAG, "【打印模式判断】isHorizontalSmall=" + isHorizontalSmall + ", 走" + (isHorizontalSmall ? "横版小标签分支" : "竖版大标签分支"));
             
-            Log.d(TAG, "【打印调试】客户文本位置: x=" + params.xCustomer + ", y=" + params.yCustomer + ", 字体=" + params.fontCustomer);
-            tsc.addText(params.xCustomer, params.yCustomer, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE,
-                    params.rotation, customerFont, customerFont, customerName);
-            
-            Log.d(TAG, "【打印调试】商品文本位置: x=" + params.xGoods + ", y=" + params.yGoods + ", 字体=" + params.fontGoods);
-            tsc.addText(params.xGoods, params.yGoods, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE,
-                    params.rotation, goodsFont, goodsFont, goodsName);
-            
-            // 添加重量打印
-            Log.d(TAG, "【打印调试】重量文本位置: x=" + params.xQty + ", y=" + (params.yQty + 20) + ", 字体=" + params.fontQty);
-            tsc.addText(params.xQty, params.yQty + 20, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE,
-                    params.rotation, weightFont, weightFont, "重量: " + weight + weightStandard);
+            if (isHorizontalSmall) {
+                // 横版小标签（4×3cm）：只打印部门属性名称，每行4个字
+                String attrName = getDepartmentAttrName(order);
+                Log.i(TAG, "【打印内容】横版小标签，只打印部门属性: " + attrName);
+                
+                // 将文本按每行4个字分割
+                String[] lines = splitTextBy4Chars(attrName);
+                Log.d(TAG, "【打印调试】文本分割后共 " + lines.length + " 行");
+                
+                // 打印位置设置（左侧留小空白，顶部留足够空间）
+                int textX = 5;  // X轴坐标，左侧留5mm空白
+                int firstLineY = 20;  // 第一行Y坐标，顶部留20mm
+                int lineSpacing = 80;  // 行间距，从40增加到80
+                
+                LabelCommand.FONTMUL fontMul = LabelCommand.FONTMUL.MUL_3; // 3倍放大
+                
+                // 打印每一行
+                for (int i = 0; i < lines.length; i++) {
+                    int yPos = firstLineY + i * lineSpacing; // 每行间距80
+                    Log.d(TAG, "【打印调试】横版小标签第" + (i+1) + "行文本位置: x=" + textX + ", y=" + yPos + ", 内容=" + lines[i]);
+                    tsc.addText(textX, yPos, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE,
+                            LabelCommand.ROTATION.ROTATION_0, fontMul, fontMul, lines[i]);
+                }
+                        
+            } else {
+                // 竖版大标签（4×6或5×8）：打印完整内容（客户、商品、重量）
+                String customerName = getDepartmentName(order);
+                String goodsName = order.getNxDistributerGoodsEntity() != null ? order.getNxDistributerGoodsEntity().getNxDgGoodsName() : "";
+                String standard = order.getNxDistributerGoodsEntity() != null ? order.getNxDistributerGoodsEntity().getNxDgGoodsStandardname() : "";
+                String weight = order.getNxDoWeight() != null ? order.getNxDoWeight() : "0";
+                String weightStandard = order.getNxDoStandard() != null ? order.getNxDoStandard() : "";
+                
+                Log.i(TAG, "【打印内容】竖版大标签，客户: " + customerName);
+                Log.i(TAG, "【打印内容】竖版大标签，商品: " + goodsName);
+                Log.i(TAG, "【打印内容】竖版大标签，重量: " + weight + weightStandard);
+                
+                // 获取字体倍数枚举
+                LabelCommand.FONTMUL customerFont = params.fontCustomer == 1 ? LabelCommand.FONTMUL.MUL_1 :
+                                                 params.fontCustomer == 2 ? LabelCommand.FONTMUL.MUL_2 :
+                                                 params.fontCustomer == 3 ? LabelCommand.FONTMUL.MUL_3 :
+                                                 params.fontCustomer == 4 ? LabelCommand.FONTMUL.MUL_4 : LabelCommand.FONTMUL.MUL_1;
+                LabelCommand.FONTMUL goodsFont = params.fontGoods == 1 ? LabelCommand.FONTMUL.MUL_1 :
+                                               params.fontGoods == 2 ? LabelCommand.FONTMUL.MUL_2 :
+                                               params.fontGoods == 3 ? LabelCommand.FONTMUL.MUL_3 :
+                                               params.fontGoods == 4 ? LabelCommand.FONTMUL.MUL_4 : LabelCommand.FONTMUL.MUL_1;
+                LabelCommand.FONTMUL weightFont = params.fontQty == 1 ? LabelCommand.FONTMUL.MUL_1 :
+                                                params.fontQty == 2 ? LabelCommand.FONTMUL.MUL_2 :
+                                                params.fontQty == 3 ? LabelCommand.FONTMUL.MUL_3 :
+                                                params.fontQty == 4 ? LabelCommand.FONTMUL.MUL_4 : LabelCommand.FONTMUL.MUL_1;
+                
+                Log.d(TAG, "【打印调试】客户文本位置: x=" + params.xCustomer + ", y=" + params.yCustomer + ", 字体=" + params.fontCustomer);
+                tsc.addText(params.xCustomer, params.yCustomer, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE,
+                        params.rotation, customerFont, customerFont, customerName);
+                
+                Log.d(TAG, "【打印调试】商品文本位置: x=" + params.xGoods + ", y=" + params.yGoods + ", 字体=" + params.fontGoods);
+                tsc.addText(params.xGoods, params.yGoods, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE,
+                        params.rotation, goodsFont, goodsFont, goodsName);
+                
+                // 添加重量打印
+                Log.d(TAG, "【打印调试】重量文本位置: x=" + params.xQty + ", y=" + params.yQty + ", 字体=" + params.fontQty);
+                tsc.addText(params.xQty, params.yQty, LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE,
+                        params.rotation, weightFont, weightFont, "重量: " + weight + weightStandard);
+            }
             
             // 添加打印命令和声音命令
             Log.d(TAG, "【打印调试】添加打印命令: addPrint(1, 1)");
@@ -1991,25 +2089,32 @@ public class CustomerStockOutActivity extends AppCompatActivity {
             Log.d(TAG, "【打印调试】添加声音命令: addSound(2, 100)");
             tsc.addSound(2, 100);
             
-            // 检查标签尺寸和坐标范围
-            Log.d(TAG, "【打印调试】标签尺寸检查: width=" + widthMm + "mm, height=" + heightMm + "mm");
-            Log.d(TAG, "【打印调试】坐标范围检查:");
-            Log.d(TAG, "  - 客户文本: x=" + params.xCustomer + ", y=" + params.yCustomer + " (应在0-" + widthMm + "范围内)");
-            Log.d(TAG, "  - 商品文本: x=" + params.xGoods + ", y=" + params.yGoods + " (应在0-" + widthMm + "范围内)");
-            Log.d(TAG, "  - 重量文本: x=" + params.xQty + ", y=" + (params.yQty + 20) + " (应在0-" + widthMm + "范围内)");
-            
-            // 检查文本内容长度
-            Log.d(TAG, "【打印调试】文本内容检查:");
-            Log.d(TAG, "  - 客户文本长度: " + customerName.length() + " 字符");
-            Log.d(TAG, "  - 商品文本长度: " + goodsName.length() + " 字符");
-            Log.d(TAG, "  - 重量文本长度: " + ("重量: " + weight + weightStandard).length() + " 字符");
-            
-            // 检查字体设置
-            Log.d(TAG, "【打印调试】字体设置检查:");
-            Log.d(TAG, "  - 客户字体: MUL_" + params.fontCustomer);
-            Log.d(TAG, "  - 商品字体: MUL_" + params.fontGoods);
-            Log.d(TAG, "  - 重量字体: MUL_" + params.fontQty);
-            Log.d(TAG, "  - 旋转角度: " + params.rotation);
+            // 检查标签尺寸和坐标范围（仅对竖版大标签）
+            if (!isHorizontalSmall) {
+                Log.d(TAG, "【打印调试】标签尺寸检查: width=" + widthMm + "mm, height=" + heightMm + "mm");
+                Log.d(TAG, "【打印调试】坐标范围检查:");
+                Log.d(TAG, "  - 客户文本: x=" + params.xCustomer + ", y=" + params.yCustomer + " (应在0-" + widthMm + "范围内)");
+                Log.d(TAG, "  - 商品文本: x=" + params.xGoods + ", y=" + params.yGoods + " (应在0-" + widthMm + "范围内)");
+                Log.d(TAG, "  - 重量文本: x=" + params.xQty + ", y=" + (params.yQty + 20) + " (应在0-" + widthMm + "范围内)");
+                
+                // 检查文本内容长度（竖版大标签）
+                String customerName = getDepartmentName(order);
+                String goodsName = order.getNxDistributerGoodsEntity() != null ? order.getNxDistributerGoodsEntity().getNxDgGoodsName() : "";
+                String weight = order.getNxDoWeight() != null ? order.getNxDoWeight() : "0";
+                String weightStandard = order.getNxDoStandard() != null ? order.getNxDoStandard() : "";
+                
+                Log.d(TAG, "【打印调试】文本内容检查:");
+                Log.d(TAG, "  - 客户文本长度: " + customerName.length() + " 字符");
+                Log.d(TAG, "  - 商品文本长度: " + goodsName.length() + " 字符");
+                Log.d(TAG, "  - 重量文本长度: " + ("重量: " + weight + weightStandard).length() + " 字符");
+                
+                // 检查字体设置（竖版大标签）
+                Log.d(TAG, "【打印调试】字体设置检查:");
+                Log.d(TAG, "  - 客户字体: MUL_" + params.fontCustomer);
+                Log.d(TAG, "  - 商品字体: MUL_" + params.fontGoods);
+                Log.d(TAG, "  - 重量字体: MUL_" + params.fontQty);
+                Log.d(TAG, "  - 旋转角度: " + params.rotation);
+            }
             // ========== END ==========
 
             Log.d(TAG, "获取打印命令数据");
@@ -2074,56 +2179,112 @@ public class CustomerStockOutActivity extends AppCompatActivity {
     }
 
     /**
-     * 获取部门名称
+     * 获取部门名称（不包含拣货名称和括号）
      */
     private String getDepartmentName(NxDepartmentOrdersEntity order) {
         if (order.getNxDepartmentEntity() != null) {
                 NxDepartmentEntity department = order.getNxDepartmentEntity();
                 if (department.getFatherDepartmentEntity() != null) {
-                    return String.format("(%s)%s.%s",
-                            department.getFatherDepartmentEntity().getNxDepartmentPickName(),
-                            department.getFatherDepartmentEntity().getNxDepartmentName(),
-                            department.getNxDepartmentName());
+                    // 有父部门：只显示父部门名.子部门名
+                    return department.getFatherDepartmentEntity().getNxDepartmentAttrName() + "." + department.getNxDepartmentAttrName();
                 } else {
-                    return String.format("(%s)%s",
-                            department.getNxDepartmentPickName(),
-                            department.getNxDepartmentName());
+                    // 没有父部门：只显示部门名
+                    return department.getNxDepartmentAttrName();
                 }
         } else if (order.getGbDepartmentEntity() != null) {
                 GbDepartmentEntity department = order.getGbDepartmentEntity();
                 if (department.getFatherGbDepartmentEntity() != null &&
                         department.getFatherGbDepartmentEntity().getGbDepartmentSubAmount() > 1) {
-                   return String.format("(%s)%s.%s",
-                            department.getFatherGbDepartmentEntity().getGbDepartmentAttrName(),
-                            department.getFatherGbDepartmentEntity().getGbDepartmentName(),
-                            department.getGbDepartmentName());
+                   // 有父部门：只显示父部门名.子部门名
+                   return department.getFatherGbDepartmentEntity().getGbDepartmentName() + "." + department.getGbDepartmentName();
                 } else {
-                return String.format("(%s)%s",
-                            department.getGbDepartmentAttrName(),
-                            department.getGbDepartmentName());
+                // 没有父部门：只显示部门名
+                return department.getGbDepartmentName();
                 }
             }
         return "未知部门";
     }
 
+    /**
+     * 获取部门属性名称（用于4×3横版打印）
+     * 返回完整的属性名称，不截断
+     */
+    private String getDepartmentAttrName(NxDepartmentOrdersEntity order) {
+        String attrName = "";
+        
+        if (order.getNxDepartmentEntity() != null) {
+            NxDepartmentEntity department = order.getNxDepartmentEntity();
+            // 优先使用部门属性名称
+            if (department.getNxDepartmentAttrName() != null && !department.getNxDepartmentAttrName().isEmpty()) {
+                attrName = department.getNxDepartmentAttrName();
+            } else if (department.getFatherDepartmentEntity() != null && 
+                       department.getFatherDepartmentEntity().getNxDepartmentAttrName() != null &&
+                       !department.getFatherDepartmentEntity().getNxDepartmentAttrName().isEmpty()) {
+                // 如果没有，则使用父部门的属性名称
+                attrName = department.getFatherDepartmentEntity().getNxDepartmentAttrName();
+            } else {
+                // 最后使用拣货名称
+                if (department.getFatherDepartmentEntity() != null) {
+                    attrName = department.getFatherDepartmentEntity().getNxDepartmentAttrName();
+                } else {
+                    attrName = department.getNxDepartmentAttrName();
+                }
+            }
+        } else if (order.getGbDepartmentEntity() != null) {
+            GbDepartmentEntity department = order.getGbDepartmentEntity();
+            if (department.getFatherGbDepartmentEntity() != null &&
+                    department.getFatherGbDepartmentEntity().getGbDepartmentSubAmount() > 1) {
+                attrName = department.getFatherGbDepartmentEntity().getGbDepartmentAttrName();
+            } else {
+                attrName = department.getGbDepartmentAttrName();
+            }
+        }
+        
+        return attrName;
+    }
+    
+    /**
+     * 将文本按每行4个字分割
+     * @param text 原始文本
+     * @return 分割后的文本数组
+     */
+    private String[] splitTextBy4Chars(String text) {
+        if (text == null || text.isEmpty()) {
+            return new String[]{""};
+        }
+        
+        List<String> lines = new ArrayList<>();
+        for (int i = 0; i < text.length(); i += 4) {
+            int end = Math.min(i + 4, text.length());
+            lines.add(text.substring(i, end));
+        }
+        return lines.toArray(new String[0]);
+    }
+
     private void sendPrintData(Vector<Byte> datas, PrintCallback callback) throws Exception {
         Log.d(TAG, "【打印】开始发送打印数据");
         try {
-            if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0] == null) {
-                Log.e(TAG, "【打印】打印机管理器未初始化");
+            // 防护：检查管理器数组
+            DeviceConnFactoryManager[] managers = DeviceConnFactoryManager.getDeviceConnFactoryManagers();
+            if (managers == null || managers.length == 0) {
+                Log.e(TAG, "【打印】打印机管理器数组为空或长度为0");
                 throw new Exception("打印机管理器未初始化");
             }
             
-            if (!DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].getConnState()) {
+            if (managers[0] == null) {
+                Log.e(TAG, "【打印】打印机管理器实例为空");
+                throw new Exception("打印机管理器未初始化");
+            }
+            
+            if (!managers[0].getConnState()) {
                 Log.e(TAG, "【打印】打印机未连接");
                 throw new Exception("打印机未连接");
             }
             
             Log.d(TAG, "【打印】发送打印数据到打印机，数据大小: " + (datas != null ? datas.size() : 0));
             
-            // 添加发送前的连接状态检查
-            DeviceConnFactoryManager manager = DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0];
-            boolean connState = manager.getConnState();
+            // 添加发送前的连接状态检查（使用已验证的 managers[0]）
+            boolean connState = managers[0].getConnState();
             Log.d(TAG, "【打印】发送前连接状态: " + connState);
             
             if (!connState) {
@@ -2132,14 +2293,14 @@ public class CustomerStockOutActivity extends AppCompatActivity {
             }
             
             // 发送数据
-            manager.sendDataImmediately(datas);
+            managers[0].sendDataImmediately(datas);
             Log.d(TAG, "【打印】✅ 打印数据发送成功");
             
             // 等待打印机处理
             Thread.sleep(1000);
             
             // 检查打印机状态
-            boolean afterPrintConnected = manager.getConnState();
+            boolean afterPrintConnected = managers[0].getConnState();
             Log.d(TAG, "【打印】打印后连接状态: " + afterPrintConnected);
             
             if (!afterPrintConnected) {
@@ -2316,13 +2477,24 @@ public class CustomerStockOutActivity extends AppCompatActivity {
 
     /**
      * 显示加载蒙版
+     * 增加Activity生命周期检查，防止崩溃
      */
     private void showLoading() {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (mLoadingDialog != null && !mLoadingDialog.isShowing()) {
-                    mLoadingDialog.show();
+                // 检查Activity是否已销毁
+                if (isFinishing() || isDestroyed()) {
+                    Log.w(TAG, "[Loading] Activity已销毁，跳过显示加载蒙版");
+                    return;
+                }
+                
+                try {
+                    if (mLoadingDialog != null && !mLoadingDialog.isShowing()) {
+                        mLoadingDialog.show();
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "[Loading] 显示加载蒙版失败", e);
                 }
             }
         });
@@ -2330,13 +2502,24 @@ public class CustomerStockOutActivity extends AppCompatActivity {
 
     /**
      * 隐藏加载蒙版
+     * 增加Activity生命周期检查，防止崩溃
      */
     private void hideLoading() {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (mLoadingDialog != null && mLoadingDialog.isShowing()) {
-                    mLoadingDialog.dismiss();
+                // 检查Activity是否已销毁
+                if (isFinishing() || isDestroyed()) {
+                    Log.w(TAG, "[Loading] Activity已销毁，跳过关闭加载蒙版");
+                    return;
+                }
+                
+                try {
+                    if (mLoadingDialog != null && mLoadingDialog.isShowing()) {
+                        mLoadingDialog.dismiss();
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "[Loading] 关闭加载蒙版失败", e);
                 }
             }
         });
@@ -2425,44 +2608,102 @@ public class CustomerStockOutActivity extends AppCompatActivity {
         }
             
         try {
-            // 关闭之前的连接
-            Log.d(TAG, "[打印机] 🔌 关闭之前的连接...");
-            if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0] != null) {
-                DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].closePort(0);
-            }
+            // 使用 CountDownLatch 等待主线程操作完成
+            final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+            final boolean[] buildSuccess = {false};
+            
+            // 在主线程中创建打印机连接（因为需要创建Handler）
+            runOnUiThread(() -> {
+                try {
+                    // 关闭之前的连接
+                    Log.d(TAG, "[打印机] 🔌 关闭之前的连接...");
+                    if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0] != null) {
+                        DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].closePort(0);
+                    }
 
-            // 根据类型建立连接
-            if ("bluetooth".equals(printerType)) {
-                Log.d(TAG, "[打印机] 📱 连接蓝牙打印机: " + printerAddress);
-                new DeviceConnFactoryManager.Build()
-                    .setId(0)
-                    .setConnMethod(DeviceConnFactoryManager.CONN_METHOD.BLUETOOTH)
-                    .setMacAddress(printerAddress)
-                    .setContext(this)
-                    .build();
-                DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].openPort();
-                Log.d(TAG, "[打印机] 📱 蓝牙打印机连接命令已发送");
-            } else if ("usb".equals(printerType)) {
-                Log.d(TAG, "[打印机] 🔌 USB打印机连接");
-                // 简化USB连接逻辑，只检查是否有USB权限，不进行复杂扫描
-                trySimpleUsbConnect();
+                    // 根据类型建立连接
+                    if ("bluetooth".equals(printerType)) {
+                        Log.d(TAG, "[打印机] 📱 连接蓝牙打印机: " + printerAddress);
+                        new DeviceConnFactoryManager.Build()
+                            .setId(0)
+                            .setConnMethod(DeviceConnFactoryManager.CONN_METHOD.BLUETOOTH)
+                            .setMacAddress(printerAddress)
+                            .setContext(this)
+                            .build();
+                        DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].openPort();
+                        Log.d(TAG, "[打印机] 📱 蓝牙打印机连接命令已发送");
+                        buildSuccess[0] = true;
+                    } else if ("usb".equals(printerType)) {
+                        Log.d(TAG, "[打印机] 🔌 USB打印机连接");
+                        // 简化USB连接逻辑，只检查是否有USB权限，不进行复杂扫描
+                        trySimpleUsbConnect();
+                        buildSuccess[0] = true;
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "[打印机] 💥 创建连接失败", e);
+                } finally {
+                    latch.countDown();
+                }
+            });
+            
+            // 等待主线程操作完成（5秒足够）
+            boolean awaitSuccess = latch.await(5000, java.util.concurrent.TimeUnit.MILLISECONDS);
+            
+            if (!awaitSuccess) {
+                Log.e(TAG, "[打印机] ❌ 等待主线程操作超时（5秒）");
+                Log.e(TAG, "[打印机] 💡 提示：主线程可能被阻塞，请重试或重启应用");
+                isPrinterConnected = false;
+                return;
+            }
+            
+            Log.d(TAG, "[打印机] ✅ 主线程操作完成");
+
+            
+            if (!buildSuccess[0]) {
+                Log.e(TAG, "[打印机] ❌ 打印机连接创建失败");
+                isPrinterConnected = false;
+                return;
             }
                 
-            // 检查连接状态 - 减少等待时间
-            Thread.sleep(500); // 减少等待时间，从2000ms改为500ms
-            boolean connected = DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].getConnState();
-            Log.d(TAG, "[打印机] 📊 连接结果: " + (connected ? "成功" : "失败"));
+            // 检查连接状态 - 分多次检查，提前发现成功
+            Log.d(TAG, "[打印机] ⏳ 开始检查蓝牙连接状态...");
+            boolean connected = false;
+            
+            // 最多检查10次，每次200ms，总计2秒
+            for (int i = 0; i < 10; i++) {
+                Thread.sleep(200);
+                if (DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0] != null) {
+                    connected = DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].getConnState();
+                    if (connected) {
+                        Log.d(TAG, "[打印机] ✅ 连接成功（第" + (i + 1) + "次检查，耗时" + ((i + 1) * 200) + "ms）");
+                        break; // 连接成功，立即退出循环
+                    }
+                }
+            }
+            
+            if (!connected) {
+                Log.d(TAG, "[打印机] 📊 连接结果: 失败（2秒内未连接成功）");
+            }
+            
             Log.d(TAG, "[打印机] 🔄 更新isPrinterConnected: " + isPrinterConnected + " -> " + connected);
             isPrinterConnected = connected;
             
-            // 等待打印机指令类型初始化 - 减少等待时间
+            // 等待打印机指令类型初始化（如果连接成功）
             if (connected) {
                 Log.d(TAG, "[打印机] ⏳ 等待打印机指令类型初始化...");
-                Thread.sleep(300); // 减少等待时间，从1000ms改为300ms
-                PrinterCommand commandType = DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].getCurrentPrinterCommand();
-                Log.d(TAG, "[打印机] 📋 打印机指令类型: " + commandType);
+                // 最多检查5次，每次200ms，总计1秒
+                PrinterCommand commandType = null;
+                for (int i = 0; i < 5; i++) {
+                    Thread.sleep(200);
+                    commandType = DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].getCurrentPrinterCommand();
+                    if (commandType != null) {
+                        Log.d(TAG, "[打印机] ✅ 指令类型已初始化: " + commandType + "（第" + (i + 1) + "次检查）");
+                        break;
+                    }
+                }
+                
                 if (commandType == null) {
-                    Log.w(TAG, "[打印机] ⚠️ 打印机指令类型仍为null，可能需要更长时间初始化");
+                    Log.w(TAG, "[打印机] ⚠️ 打印机指令类型仍为null（1秒内未初始化）");
                 }
             }
             

@@ -54,6 +54,15 @@ public class CustomerAdapter extends RecyclerView.Adapter<CustomerAdapter.ViewHo
         return !selectedIndexes.isEmpty();
     }
 
+    /**
+     * 清除所有选中状态
+     */
+    public void clearSelection() {
+        selectedIndexes.clear();
+        notifyDataSetChanged();
+        Log.d("CustomerAdapter", "已清除所有选中状态");
+    }
+
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {

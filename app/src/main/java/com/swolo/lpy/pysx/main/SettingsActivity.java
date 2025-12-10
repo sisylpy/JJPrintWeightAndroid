@@ -17,6 +17,7 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.content.pm.PackageManager;
+import android.content.pm.PackageInfo;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 import android.os.Build;
@@ -37,7 +38,9 @@ import androidx.core.content.ContextCompat;
 import com.swolo.lpy.pysx.ui.BaseActivity;
 import com.swolo.lpy.pysx.main.gp.Constant;
 import com.swolo.lpy.pysx.main.DeviceConnFactoryManager;
+import com.swolo.lpy.pysx.main.gp.PrinterCommand;
 import java.util.HashMap;
+import java.util.Vector;
 import android.app.PendingIntent;
 
 /**
@@ -78,9 +81,9 @@ public class SettingsActivity extends BaseActivity {
     private static final String KEY_SCREEN_ORIENTATION = "screen_orientation";
     private static final String[] PAPER_SIZE_OPTIONS = {
         "4×3cm（横）",
-        "6×4cm（横）",
         "4×6cm（竖）",
-        "5×8cm（竖）"
+        "5×8cm（竖）",
+        "8×5cm（横）"
     };
     // 【新增】屏幕方向选项
     private static final String[] SCREEN_ORIENTATION_OPTIONS = {
@@ -90,9 +93,9 @@ public class SettingsActivity extends BaseActivity {
     // 纸张尺寸映射（单位：厘米），与CustomerStockOutActivity保持一致
     private static final int[][] PAPER_SIZE_CM = {
         {4, 3}, // 4×3cm 横
-        {6, 4}, // 6×4cm 横
         {4, 6}, // 4×6cm 竖
-        {5, 8}  // 5×8cm 竖
+        {5, 8}, // 5×8cm 竖
+        {8, 5}  // 8×5cm 横（宽度80mm，高度50mm）
     };
     
     // ==================== 设备状态 ====================
@@ -106,6 +109,10 @@ public class SettingsActivity extends BaseActivity {
     private BluetoothGattCharacteristic writeCharacteristic;
     private BluetoothGattCharacteristic notifyCharacteristic;
     private BluetoothGattCallback gattCallback;
+    
+    // ==================== USB打印机相关 ====================
+    private PendingIntent mPermissionIntent;
+    private BroadcastReceiver usbReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -115,6 +122,55 @@ public class SettingsActivity extends BaseActivity {
         
         // 检查并请求必要权限
         checkAndRequestPermissions();
+        
+        // 初始化USB权限请求
+        mPermissionIntent = PendingIntent.getBroadcast(this, 0,
+            new Intent(Constant.ACTION_USB_PERMISSION), PendingIntent.FLAG_IMMUTABLE);
+        Log.d(TAG, "mPermissionIntent初始化完成");
+        
+        // 注册USB广播接收器
+        IntentFilter filter = new IntentFilter(Constant.ACTION_USB_PERMISSION);
+        filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
+        filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
+        
+        usbReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String action = intent.getAction();
+                Log.d(TAG, "收到USB广播: " + action);
+                
+                if (Constant.ACTION_USB_PERMISSION.equals(action)) {
+                    synchronized (this) {
+                        UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                        boolean granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false);
+                        
+                        Log.d(TAG, "USB权限广播 - granted=" + granted + ", device=" + (device != null ? device.getDeviceName() : "null"));
+                        
+                        if (granted) {
+                            if (device != null) {
+                                Log.d(TAG, "USB权限已授予，开始连接: " + device.getDeviceName());
+                                showToastInReceiver(context, "✓ USB权限已授予，开始连接打印机...", Toast.LENGTH_LONG);
+                                connectToUsbPrinter(device);
+                            } else {
+                                Log.e(TAG, "USB权限广播: 设备信息为空");
+                                showToastInReceiver(context, "获取设备信息失败", Toast.LENGTH_LONG);
+                            }
+                        } else {
+                            Log.d(TAG, "USB权限被用户拒绝 - 请在系统弹出的权限对话框中点击【允许】");
+                            showToastInReceiver(context, "✗ USB权限被拒绝 - 请重新选择USB打印机", Toast.LENGTH_LONG);
+                        }
+                    }
+                } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(action)) {
+                    Log.d(TAG, "USB设备已断开");
+                    updatePrinterStatus();
+                } else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
+                    Log.d(TAG, "USB设备已连接");
+                }
+            }
+        };
+        
+        registerReceiver(usbReceiver, filter);
+        Log.d(TAG, "USB广播接收器注册完成");
     }
 
     @Override
@@ -357,6 +413,17 @@ public class SettingsActivity extends BaseActivity {
     protected void onDestroy() {
         super.onDestroy();
         Log.d(TAG, "onDestroy: 页面销毁");
+        
+        // 注销USB广播接收器
+        if (usbReceiver != null) {
+            try {
+                unregisterReceiver(usbReceiver);
+                Log.d(TAG, "USB广播接收器已注销");
+            } catch (Exception e) {
+                Log.e(TAG, "注销USB广播接收器失败", e);
+            }
+        }
+        
         // 断开蓝牙称连接
         if (bluetoothGatt != null) {
             // 检查蓝牙权限
@@ -403,30 +470,13 @@ public class SettingsActivity extends BaseActivity {
      */
     private void connectUsbPrinter() {
         Log.d(TAG, "connectUsbPrinter: 开始连接USB打印机");
-        
-        // 检查USB权限
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (ContextCompat.checkSelfPermission(this, "android.permission.USB_PERMISSION") != PackageManager.PERMISSION_GRANTED) {
-                Log.e(TAG, "connectUsbPrinter: 缺少USB权限");
-                Toast.makeText(this, "缺少USB权限", Toast.LENGTH_SHORT).show();
-                return;
-            }
-        }
-        
-            // 检查蓝牙权限
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                Log.e(TAG, "connectUsbPrinter: 缺少蓝牙连接权限");
-                Toast.makeText(this, "缺少蓝牙连接权限", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-            }
+        showToastWithVersion("开始查找USB打印机...");
 
         // 获取USB管理器
         UsbManager usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
         if (usbManager == null) {
             Log.e(TAG, "connectUsbPrinter: 无法获取USB管理器");
-            Toast.makeText(this, "无法获取USB管理器", Toast.LENGTH_SHORT).show();
+            showToastWithVersion("无法获取USB管理器");
                 return;
             }
 
@@ -434,31 +484,63 @@ public class SettingsActivity extends BaseActivity {
         HashMap<String, UsbDevice> deviceList = usbManager.getDeviceList();
         UsbDevice printerDevice = null;
         
+        if (deviceList == null || deviceList.isEmpty()) {
+            Log.e(TAG, "connectUsbPrinter: 未检测到USB设备");
+            showToastWithVersionLong("未检测到USB设备");
+            return;
+        }
+        
+        showToastWithVersion("发现 " + deviceList.size() + " 个USB设备，正在查找...");
+        
         for (UsbDevice device : deviceList.values()) {
-            Log.d(TAG, "connectUsbPrinter: 发现USB设备: " + device.getDeviceName() + ", VID=" + device.getVendorId() + ", PID=" + device.getProductId());
-            // 这里可以根据具体的打印机VID/PID进行过滤
-            if (device.getVendorId() == 0x0483 || device.getVendorId() == 0x0484) { // 示例VID
+            int vid = device.getVendorId();
+            int pid = device.getProductId();
+            Log.d(TAG, "connectUsbPrinter: 发现USB设备: " + device.getDeviceName() + ", VID=" + vid + ", PID=" + pid);
+            
+            // 检查是否为已知的打印机VID/PID（参考UsbListActivity和StockOutActivity）
+            // 支持的打印机VID/PID列表
+            if ((vid == 34918 && pid == 256) ||
+                (vid == 1137 && pid == 85) ||
+                (vid == 6790 && pid == 30084) ||
+                (vid == 26728 && pid == 256) ||
+                (vid == 26728 && pid == 512) ||
+                (vid == 26728 && pid == 768) ||
+                (vid == 26728 && pid == 1024) ||
+                (vid == 26728 && pid == 1280) ||
+                (vid == 26728 && pid == 1536)) {
                 printerDevice = device;
+                String msg = "找到打印机！VID=" + vid + ", PID=" + pid;
+                Log.d(TAG, "connectUsbPrinter: " + msg);
+                showToastWithVersionLong(msg);
                 break;
             }
         }
         
         if (printerDevice == null) {
             Log.e(TAG, "connectUsbPrinter: 未找到USB打印机设备");
-            Toast.makeText(this, "未找到USB打印机设备", Toast.LENGTH_SHORT).show();
-                    return;
+            showToastWithVersionLong("未找到匹配的打印机设备");
+            return;
         }
         
         Log.d(TAG, "connectUsbPrinter: 找到USB打印机设备: " + printerDevice.getDeviceName());
+        showToastWithVersion("准备连接打印机...");
         
         // 检查USB权限
         if (!usbManager.hasPermission(printerDevice)) {
             Log.d(TAG, "connectUsbPrinter: 请求USB权限");
-            PendingIntent permissionIntent = PendingIntent.getBroadcast(this, 0, new Intent("USB_PERMISSION"), 0);
-            usbManager.requestPermission(printerDevice, permissionIntent);
-                return;
+            showToastWithVersionLong("请点击弹出对话框的【允许】按钮授权USB打印机访问 [v1.0.1]");
+            
+            try {
+                usbManager.requestPermission(printerDevice, mPermissionIntent);
+                Log.d(TAG, "connectUsbPrinter: 已发送USB权限请求，等待用户响应...");
+            } catch (Exception e) {
+                Log.e(TAG, "connectUsbPrinter: 请求USB权限失败", e);
+                showToastWithVersion("USB权限请求失败: " + e.getMessage());
             }
+            return;
+        }
 
+        showToastWithVersion("已有USB权限，开始连接...");
         // 连接USB打印机
         connectToUsbPrinter(printerDevice);
     }
@@ -468,6 +550,7 @@ public class SettingsActivity extends BaseActivity {
      */
     private void connectToUsbPrinter(UsbDevice device) {
         Log.d(TAG, "connectToUsbPrinter: 开始连接USB打印机: " + device.getDeviceName());
+        showToastWithVersion("正在初始化打印机连接...");
         
         try {
             // 使用DeviceConnFactoryManager连接USB打印机
@@ -478,6 +561,7 @@ public class SettingsActivity extends BaseActivity {
                     .setContext(this)
                     .build();
 
+            showToastWithVersion("正在打开打印机端口...");
             DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].openPort();
             
             // 检查连接状态
@@ -489,23 +573,29 @@ public class SettingsActivity extends BaseActivity {
             SharedPreferences printerPrefs = getSharedPreferences("printer_cache", MODE_PRIVATE);
             printerPrefs.edit()
                 .putString("printer_type", "usb")
+                .putString("printer_address", device.getDeviceName())  // 修复：使用printer_address，兼容CustomerStockOutActivity的判断
                 .putString("printer_name", device.getDeviceName())
                 .putInt("printer_vid", device.getVendorId())
                 .putInt("printer_pid", device.getProductId())
                 .apply();
             
             Log.d(TAG, "connectToUsbPrinter: USB打印机连接成功");
-            Toast.makeText(this, "USB打印机连接成功", Toast.LENGTH_SHORT).show();
+            // 显示保存的配置信息，便于调试
+            Log.d(TAG, "connectToUsbPrinter: 保存的配置 - type=" + printerPrefs.getString("printer_type", "") + 
+                ", address=" + printerPrefs.getString("printer_address", ""));
+            showToastWithVersion("USB打印机连接成功，正在打印测试页...");
+            // 自动打印测试页
+            printTestPage();
             } else {
             Log.e(TAG, "connectToUsbPrinter: USB打印机连接失败");
-            Toast.makeText(this, "USB打印机连接失败", Toast.LENGTH_SHORT).show();
+            showToastWithVersion("USB打印机连接失败");
         }
                 
                     updatePrinterStatus();
             
         } catch (Exception e) {
             Log.e(TAG, "connectToUsbPrinter: USB打印机连接失败", e);
-            Toast.makeText(this, "USB打印机连接失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            showToastWithVersion("USB打印机连接失败: " + e.getMessage());
         }
     }
     
@@ -738,6 +828,169 @@ public class SettingsActivity extends BaseActivity {
         }
     }
 
+    /**
+     * 获取应用版本号
+     */
+    private String getVersionName() {
+        try {
+            PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+            return pInfo.versionName;
+        } catch (Exception e) {
+            Log.e(TAG, "获取版本号失败", e);
+            return "未知";
+        }
+    }
+    
+    /**
+     * 显示带版本号的Toast
+     */
+    private void showToastWithVersion(String message) {
+        String versionInfo = "v" + getVersionName();
+        Toast.makeText(this, message + " [" + versionInfo + "]", Toast.LENGTH_SHORT).show();
+    }
+    
+    /**
+     * 显示带版本号的Toast（长时间显示）
+     */
+    private void showToastWithVersionLong(String message) {
+        String versionInfo = "v" + getVersionName();
+        Toast.makeText(this, message + " [" + versionInfo + "]", Toast.LENGTH_LONG).show();
+    }
+    
+    /**
+     * 在广播接收器中显示带版本号的Toast
+     */
+    private void showToastInReceiver(Context context, String message, int duration) {
+        String versionInfo = "v" + getVersionName();
+        Toast.makeText(context, message + " [" + versionInfo + "]", duration).show();
+    }
+    
+    /**
+     * 打印测试页
+     */
+    private void printTestPage() {
+        Log.d(TAG, "printTestPage: 开始打印测试页");
+        new Thread(() -> {
+            try {
+                DeviceConnFactoryManager manager = DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0];
+                if (manager == null || !manager.getConnState()) {
+                    Log.e(TAG, "printTestPage: 打印机未连接");
+                    runOnUiThread(() -> showToastWithVersion("打印机未连接"));
+                    return;
+                }
+                
+                // 等待打印机初始化
+                Thread.sleep(500);
+                
+                PrinterCommand commandType = manager.getCurrentPrinterCommand();
+                Log.d(TAG, "printTestPage: 打印机指令类型: " + commandType);
+                
+                if (commandType == PrinterCommand.ESC) {
+                    Log.d(TAG, "printTestPage: 使用ESC指令打印");
+                    printESCTestPage();
+                } else if (commandType == PrinterCommand.TSC) {
+                    Log.d(TAG, "printTestPage: 使用TSC指令打印");
+                    printTSCTestPage();
+                } else {
+                    Log.w(TAG, "printTestPage: 指令类型为null，尝试发送初始化命令");
+                    // 尝试发送ESC初始化命令来确定类型
+                    try {
+                        com.printer.command.EscCommand esc = new com.printer.command.EscCommand();
+                        esc.addInitializePrinter();
+                        Vector<Byte> testData = esc.getCommand();
+                        manager.sendDataImmediately(testData);
+                        Thread.sleep(300);
+                        commandType = manager.getCurrentPrinterCommand();
+                        Log.d(TAG, "printTestPage: 发送初始化命令后类型: " + commandType);
+                    } catch (Exception e) {
+                        Log.e(TAG, "printTestPage: 发送初始化命令失败", e);
+                    }
+                    
+                    // 再次尝试打印
+                    if (commandType == PrinterCommand.ESC) {
+                        Log.d(TAG, "printTestPage: 检测到ESC类型，开始打印");
+                        printESCTestPage();
+                    } else if (commandType == PrinterCommand.TSC) {
+                        Log.d(TAG, "printTestPage: 检测到TSC类型，开始打印");
+                        printTSCTestPage();
+                    } else {
+                        Log.w(TAG, "printTestPage: 无法确定打印机类型，尝试使用TSC");
+                        // 最后尝试使用TSC（标签打印机常用）
+                        printTSCTestPage();
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "printTestPage: 打印失败", e);
+                runOnUiThread(() -> showToastWithVersion("打印测试页失败: " + e.getMessage()));
+            }
+        }).start();
+    }
+    
+    /**
+     * 使用ESC指令打印测试页
+     */
+    private void printESCTestPage() throws Exception {
+        Log.d(TAG, "printESCTestPage: 使用ESC指令打印测试页");
+        com.printer.command.EscCommand esc = new com.printer.command.EscCommand();
+        esc.addInitializePrinter();
+        esc.addSelectJustification(com.printer.command.EscCommand.JUSTIFICATION.CENTER);
+        esc.addText("==============\n");
+        esc.addText("打印测试页\n");
+        esc.addText("v" + getVersionName() + "\n");
+        esc.addText("打印机连接成功！\n");
+        esc.addText("==============\n");
+        esc.addCutPaper();
+        
+        Vector<Byte> printData = esc.getCommand();
+        DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].sendDataImmediately(printData);
+        Log.d(TAG, "printESCTestPage: ESC测试页发送成功");
+        
+        runOnUiThread(() -> showToastWithVersion("测试页打印完成 [v" + getVersionName() + "]"));
+    }
+    
+    /**
+     * 使用TSC指令打印测试页
+     */
+    private void printTSCTestPage() throws Exception {
+        Log.d(TAG, "printTSCTestPage: 使用TSC指令打印测试页");
+        com.printer.command.LabelCommand tsc = new com.printer.command.LabelCommand();
+        
+        // 设置纸张尺寸
+        SharedPreferences prefs = getSharedPreferences("settings_prefs", MODE_PRIVATE);
+        int paperSizeIndex = prefs.getInt("paper_size", 0);
+        int[][] PAPER_SIZE_CM = {{4, 3}, {4, 6}, {5, 8}, {8, 5}};
+        int widthMm = PAPER_SIZE_CM[paperSizeIndex][0] * 10;
+        int heightMm = PAPER_SIZE_CM[paperSizeIndex][1] * 10;
+        
+        tsc.addSize(widthMm, heightMm);
+        tsc.addGap(10);
+        tsc.addDirection(com.printer.command.LabelCommand.DIRECTION.FORWARD, com.printer.command.LabelCommand.MIRROR.NORMAL);
+        tsc.addReference(0, 0);
+        tsc.addCls();
+        
+        // 添加文本
+        tsc.addText(20, 30, com.printer.command.LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, 
+            com.printer.command.LabelCommand.ROTATION.ROTATION_0, 
+            com.printer.command.LabelCommand.FONTMUL.MUL_2, com.printer.command.LabelCommand.FONTMUL.MUL_2, 
+            "测试页");
+        tsc.addText(20, 80, com.printer.command.LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, 
+            com.printer.command.LabelCommand.ROTATION.ROTATION_0, 
+            com.printer.command.LabelCommand.FONTMUL.MUL_1, com.printer.command.LabelCommand.FONTMUL.MUL_1, 
+            "v" + getVersionName());
+        tsc.addText(20, 120, com.printer.command.LabelCommand.FONTTYPE.SIMPLIFIED_CHINESE, 
+            com.printer.command.LabelCommand.ROTATION.ROTATION_0, 
+            com.printer.command.LabelCommand.FONTMUL.MUL_1, com.printer.command.LabelCommand.FONTMUL.MUL_1, 
+            "连接成功！");
+        
+        tsc.addPrint(1, 1);
+        
+        Vector<Byte> printData = tsc.getCommand();
+        DeviceConnFactoryManager.getDeviceConnFactoryManagers()[0].sendDataImmediately(printData);
+        Log.d(TAG, "printTSCTestPage: TSC测试页发送成功");
+        
+        runOnUiThread(() -> showToastWithVersion("测试页打印完成 [v" + getVersionName() + "]"));
+    }
+    
     /**
      * 检查并请求必要权限
      */
